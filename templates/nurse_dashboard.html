@@ -1,0 +1,732 @@
+{% extends 'base.html' %}
+
+{% block title %}Nurse Dashboard - Medical AI System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, var(--nurse-color) 0%, #ad1457 100%);
+        color: white;
+        padding: 30px 0;
+        margin: -30px -30px 30px -30px;
+        border-radius: 0 0 20px 20px;
+    }
+    
+    .dashboard-stats {
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        height: 100%;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .cases-table {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .table-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        padding: 20px 25px;
+        margin: 0;
+    }
+    
+    .table thead th {
+        background-color: #f8f9fa;
+        border: none;
+        padding: 15px 12px;
+        font-weight: 600;
+        color: var(--primary-color);
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .table tbody td {
+        padding: 15px 12px;
+        border-top: 1px solid #e9ecef;
+        vertical-align: middle;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .priority-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .priority-critical {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .priority-urgent {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    .priority-high {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .priority-medium {
+        background-color: #20c997;
+        color: white;
+    }
+    
+    .priority-low {
+        background-color: #6c757d;
+        color: white;
+    }
+    
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-pending {
+        background-color: #6c757d;
+        color: white;
+    }
+    
+    .status-in-progress {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .status-doctor-review {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    .status-completed {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .status-cancelled {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .btn-outline-purple {
+        color: #667eea;
+        border-color: #667eea;
+    }
+    
+    .btn-outline-purple:hover {
+        color: white;
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+    
+    .btn-action {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-view {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .btn-view:hover {
+        background-color: #138496;
+        color: white;
+    }
+    
+    .btn-edit {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-edit:hover {
+        background-color: #e0a800;
+    }
+    
+    .btn-complete {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .btn-complete:hover {
+        background-color: #218838;
+    }
+    
+    .new-diagnosis-section {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        border: 2px solid rgba(233, 30, 99, 0.1);
+    }
+    
+    .btn-new-diagnosis {
+        background: linear-gradient(135deg, var(--nurse-color) 0%, #ad1457 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 15px 30px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .btn-new-diagnosis:hover {
+        background: linear-gradient(135deg, #ad1457 0%, #880e4f 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(233, 30, 99, 0.3);
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+    
+    .patient-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        margin-right: 10px;
+    }
+    
+    .patient-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .symptoms-text {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .quick-filters {
+        margin-bottom: 20px;
+    }
+    
+    .filter-btn {
+        margin-right: 10px;
+        margin-bottom: 10px;
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .filter-btn.active {
+        background-color: var(--nurse-color);
+        border-color: var(--nurse-color);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .btn-action {
+            margin-bottom: 5px;
+        }
+        
+        .symptoms-text {
+            max-width: 150px;
+        }
+        
+        .patient-info {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .patient-avatar {
+            margin-bottom: 5px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Nurse Dashboard</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-user-nurse me-3"></i>
+                    Nurse Dashboard
+                </h1>
+                <p class="mb-0 opacity-75">
+                    Welcome back, {{ user.get_full_name|default:user.username }}! 
+                    Ready to help patients today?
+                </p>
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <a href="{% url 'patients:patient_create' %}" class="btn btn-light btn-lg me-2 mb-2 mb-md-0">
+                    <i class="fas fa-user-plus me-2"></i>
+                    New Patient
+                </a>
+                <a href="{% url 'diagnoses:case_create' %}" class="btn btn-success btn-lg mb-2 mb-md-0">
+                    <i class="fas fa-file-medical me-2"></i>
+                    New Case
+                </a>
+                <div class="d-inline-flex align-items-center mt-2 mt-md-0 ms-md-3">
+                    <i class="fas fa-clock me-2"></i>
+                    <span id="current-time"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="dashboard-stats">
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon text-primary">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <div class="stat-number text-primary">{{ my_cases_count|default:"0" }}</div>
+                <div class="stat-label">My Active Cases</div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon text-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-number text-warning">{{ urgent_cases_count|default:"0" }}</div>
+                <div class="stat-label">Urgent Cases</div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon text-info">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <div class="stat-number text-info">{{ pending_cases_count|default:"0" }}</div>
+                <div class="stat-label">Pending Review</div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon text-success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-number text-success">{{ completed_today|default:"0" }}</div>
+                <div class="stat-label">Completed Today</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Diagnosis Section -->
+<div class="new-diagnosis-section">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h4 class="mb-2">
+                <i class="fas fa-plus-circle me-2 text-success"></i>
+                Start New Patient Diagnosis
+            </h4>
+            <p class="text-muted mb-md-0">
+                Search for existing patients or register new ones to begin AI-assisted diagnostic cases.
+            </p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <div class="d-grid gap-2 d-md-block">
+                <a href="{% url 'patients:patient_create' %}" class="btn btn-success me-md-2 mb-2 mb-md-0">
+                    <i class="fas fa-user-plus me-2"></i>
+                    Add New Patient
+                </a>
+                <a href="{% url 'patients:patient_search' %}" class="btn btn-info me-md-2 mb-2 mb-md-0">
+                    <i class="fas fa-search me-2"></i>
+                    Find Patient
+                </a>
+                <a href="{% url 'diagnoses:case_create' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-stethoscope me-2"></i>
+                    Quick Start
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Filters -->
+<div class="quick-filters">
+    <h5 class="mb-3">Filter Cases:</h5>
+    <button class="btn btn-outline-primary filter-btn active" onclick="filterCases('all')">
+        <i class="fas fa-list me-1"></i>All Cases
+    </button>
+    <button class="btn btn-outline-danger filter-btn" onclick="filterCases('urgent')">
+        <i class="fas fa-exclamation-triangle me-1"></i>Urgent
+    </button>
+    <button class="btn btn-outline-warning filter-btn" onclick="filterCases('pending')">
+        <i class="fas fa-hourglass-half me-1"></i>Pending
+    </button>
+    <button class="btn btn-outline-info filter-btn" onclick="filterCases('in-progress')">
+        <i class="fas fa-spinner me-1"></i>In Progress
+    </button>
+    <button class="btn btn-outline-success filter-btn" onclick="filterCases('completed')">
+        <i class="fas fa-check-circle me-1"></i>Completed
+    </button>
+</div>
+
+<!-- Recent Cases Table -->
+<div class="cases-table">
+    <div class="table-header">
+        <h4 class="mb-0">
+            <i class="fas fa-clipboard-list me-2"></i>
+            Recent Cases
+        </h4>
+    </div>
+    
+    {% if recent_cases %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Symptoms</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for case in recent_cases %}
+                    <tr data-case-id="{{ case.id }}" 
+                        data-status="{{ case.status|lower }}" 
+                        data-priority="{{ case.priority|lower }}">
+                        <td>
+                            <div class="patient-info">
+                                <div class="patient-avatar">
+                                    {{ case.patient.first_name|first }}{{ case.patient.last_name|first }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold">{{ case.patient.full_name }}</div>
+                                    <small class="text-muted">ID: #{{ case.patient.id }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="symptoms-text" title="{{ case.symptoms }}">
+                                {{ case.symptoms|truncatechars:50 }}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ case.status|lower }}">
+                                {{ case.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="priority-badge priority-{{ case.priority|lower }}">
+                                {{ case.get_priority_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <div>{{ case.created_at|date:"M d, Y" }}</div>
+                            <small class="text-muted">{{ case.created_at|time:"g:i A" }}</small>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-action btn-view" 
+                                        onclick="viewCase('{{ case.id }}')"
+                                        title="View Case Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                
+                                {% if case.status == 'PENDING' or case.status == 'IN_PROGRESS' %}
+                                <button class="btn btn-action btn-edit" 
+                                        onclick="editCase('{{ case.id }}')"
+                                        title="Edit Case">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% endif %}
+                                
+                                {% if case.status == 'IN_PROGRESS' %}
+                                <button class="btn btn-action btn-complete" 
+                                        onclick="completeCase('{{ case.id }}')"
+                                        title="Mark Complete">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="fas fa-clipboard"></i>
+            <h4>No Cases Yet</h4>
+            <p class="text-muted">You haven't created any cases yet. Start your first diagnosis to get going!</p>
+            <button type="button" class="btn btn-new-diagnosis" onclick="startNewDiagnosis()">
+                <i class="fas fa-plus me-2"></i>
+                Create First Case
+            </button>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Pagination -->
+{% if recent_cases.has_other_pages %}
+<nav aria-label="Cases pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if recent_cases.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ recent_cases.previous_page_number }}">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        {% for num in recent_cases.paginator.page_range %}
+            <li class="page-item {% if recent_cases.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+        {% endfor %}
+        
+        {% if recent_cases.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ recent_cases.next_page_number }}">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Update current time
+function updateTime() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+    });
+    const dateString = now.toLocaleDateString('en-US', { 
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric'
+    });
+    document.getElementById('current-time').innerHTML = 
+        `<strong>${timeString}</strong><br><small>${dateString}</small>`;
+}
+
+// Update time every minute
+updateTime();
+setInterval(updateTime, 60000);
+
+// Start new diagnosis
+function startNewDiagnosis() {
+    // This would typically redirect to a new case form
+    // For now, we'll show an alert
+    if (confirm('Start a new patient diagnosis case?')) {
+        // In a real app, this would redirect to the new case form
+        window.location.href = '#'; // Replace with actual URL
+        console.log('Redirecting to new diagnosis form...');
+    }
+}
+
+// View case details
+function viewCase(caseId) {
+    // This would typically redirect to case detail view
+    console.log('Viewing case:', caseId);
+    // In a real app: window.location.href = `/cases/${caseId}/`;
+}
+
+// Edit case
+function editCase(caseId) {
+    // This would typically redirect to case edit form
+    console.log('Editing case:', caseId);
+    // In a real app: window.location.href = `/cases/${caseId}/edit/`;
+}
+
+// Complete case
+function completeCase(caseId) {
+    if (confirm('Mark this case as completed?')) {
+        // This would typically make an AJAX call to update the case status
+        console.log('Completing case:', caseId);
+        
+        // Show success message
+        showToast('Case marked as completed!', 'success');
+        
+        // In a real app, make AJAX call to update status
+        // Then refresh the table or update the row
+    }
+}
+
+// Filter cases
+function filterCases(filter) {
+    // Update active filter button
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Show/hide table rows based on filter
+    const rows = document.querySelectorAll('tbody tr[data-case-id]');
+    
+    rows.forEach(row => {
+        const status = row.dataset.status;
+        const priority = row.dataset.priority;
+        let show = false;
+        
+        switch(filter) {
+            case 'all':
+                show = true;
+                break;
+            case 'urgent':
+                show = priority === 'urgent' || priority === 'critical';
+                break;
+            case 'pending':
+                show = status === 'pending';
+                break;
+            case 'in-progress':
+                show = status === 'in-progress';
+                break;
+            case 'completed':
+                show = status === 'completed';
+                break;
+        }
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas fa-check-circle me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" 
+                    data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+    
+    // Add to page
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1060';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.appendChild(toast);
+    
+    // Show toast
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    // Remove from DOM after hiding
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

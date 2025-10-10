@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Knowledge Base - Medical AI System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .search-box-large {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-top: 20px;
+    }
+    
+    .result-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+    }
+    
+    .result-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .result-content {
+        line-height: 1.7;
+        color: #495057;
+        margin: 15px 0;
+    }
+    
+    .highlight {
+        background-color: #fff3cd;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-weight: 600;
+    }
+    
+    .result-source {
+        color: #667eea;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+    
+    .result-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-top: 10px;
+    }
+    
+    .ai-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="search-header">
+        <div class="text-center">
+            <h1 class="mb-3">
+                <i class="fas fa-search me-2"></i>
+                AI-Powered Knowledge Search
+            </h1>
+            <p class="mb-0 opacity-90 fs-5">
+                Search 14,000+ medical documents using advanced RAG technology
+            </p>
+            
+            <!-- Search Box -->
+            <div class="search-box-large">
+                <form method="get">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-robot text-primary"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control border-start-0 ps-0" 
+                               name="q" 
+                               placeholder="Ask a medical question or search for protocols..."
+                               value="{{ query }}"
+                               autofocus>
+                        <button class="btn btn-primary px-4" type="submit">
+                            <i class="fas fa-search me-2"></i>Search
+                        </button>
+                    </div>
+                    <div class="text-start mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-lightbulb me-1"></i>
+                            Try: "pediatric fever management" or "WHO malaria treatment guidelines"
+                        </small>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    {% if query %}
+        {% if results %}
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3>
+                    <i class="fas fa-file-medical me-2"></i>
+                    Search Results
+                    <span class="badge bg-primary rounded-pill">{{ result_count }}</span>
+                </h3>
+                <span class="ai-badge">
+                    <i class="fas fa-robot me-2"></i>AI-Powered
+                </span>
+            </div>
+            <p class="text-muted">
+                Found <strong>{{ result_count }}</strong> relevant document(s) for "<strong>{{ query }}</strong>"
+            </p>
+        </div>
+
+        {% for result in results %}
+        <div class="result-card">
+            <div class="result-source">
+                <i class="fas fa-file-medical me-2"></i>
+                {{ result.source }}
+            </div>
+            
+            <div class="result-content">
+                {{ result.content|truncatewords:100 }}
+            </div>
+            
+            <div class="result-meta">
+                <i class="fas fa-align-left me-1"></i>
+                {{ result.content|wordcount }} words
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="text-center mt-4">
+            <p class="text-muted">
+                <i class="fas fa-info-circle me-2"></i>
+                Results are ranked by relevance using AI semantic search
+            </p>
+        </div>
+        {% else %}
+        <!-- No Results -->
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-5x text-muted mb-4"></i>
+            <h3 class="text-muted mb-3">No Results Found</h3>
+            <p class="text-muted mb-4">
+                We couldn't find any documents matching "<strong>{{ query }}</strong>"
+            </p>
+            <div class="bg-light p-4 rounded">
+                <h5>Try These Tips:</h5>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Use different keywords or phrases</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Try more general medical terms</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Check your spelling</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Browse the <a href="{% url 'knowledge:document_list' %}">document library</a></li>
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        <!-- No Query Yet -->
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-5x text-muted mb-4"></i>
+            <h3 class="text-muted mb-3">Start Your Search</h3>
+            <p class="text-muted mb-4">
+                Enter a medical query above to search the knowledge base
+            </p>
+            
+            <div class="row g-3 justify-content-center">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-question-circle text-primary me-2"></i>
+                                Ask Questions
+                            </h5>
+                            <p class="card-text small">
+                                Search for specific medical conditions, treatments, or protocols
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-book-medical text-success me-2"></i>
+                                Find Guidelines
+                            </h5>
+                            <p class="card-text small">
+                                Access WHO, CDC, and other authoritative medical guidelines
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-capsules text-warning me-2"></i>
+                                Drug Information
+                            </h5>
+                            <p class="card-text small">
+                                Look up medication information, dosages, and contraindications
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

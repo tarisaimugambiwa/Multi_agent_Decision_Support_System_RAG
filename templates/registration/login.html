@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - Medical AI System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-container {
+        min-height: calc(100vh - 200px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .login-card {
+        max-width: 450px;
+        width: 100%;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    
+    .login-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        text-align: center;
+        padding: 40px 30px;
+    }
+    
+    .login-header i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+    }
+    
+    .login-body {
+        padding: 40px 30px;
+        background: white;
+    }
+    
+    .form-floating {
+        margin-bottom: 20px;
+    }
+    
+    .form-floating .form-control {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 15px 12px;
+        height: auto;
+        transition: all 0.3s ease;
+    }
+    
+    .form-floating .form-control:focus {
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+    }
+    
+    .form-floating label {
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .btn-login {
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #2980b9 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 15px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    
+    .btn-login:hover {
+        background: linear-gradient(135deg, #2980b9 0%, #21618c 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+    }
+    
+    .login-footer {
+        background: #f8f9fa;
+        padding: 20px 30px;
+        text-align: center;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .remember-me {
+        margin: 20px 0;
+    }
+    
+    .form-check-input:checked {
+        background-color: var(--secondary-color);
+        border-color: var(--secondary-color);
+    }
+    
+    .error-messages {
+        background: #ffe6e6;
+        border: 1px solid #ff9999;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        color: #cc0000;
+    }
+    
+    .error-messages ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    
+    .role-selector {
+        margin-top: 10px;
+    }
+    
+    .role-btn {
+        padding: 20px 10px;
+        border-radius: 10px;
+        border-width: 2px;
+        transition: all 0.3s ease;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .role-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .btn-check:checked + .role-btn {
+        transform: scale(1.05);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    
+    .btn-outline-primary.role-btn {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+    
+    .btn-check:checked + .btn-outline-primary.role-btn {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+    }
+    
+    .btn-outline-success.role-btn {
+        border-color: var(--secondary-color);
+        color: var(--secondary-color);
+    }
+    
+    .btn-check:checked + .btn-outline-success.role-btn {
+        background-color: var(--secondary-color);
+        border-color: var(--secondary-color);
+        color: white;
+    }
+    
+    .medical-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        z-index: -1;
+    }
+    
+    .medical-pattern {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+            radial-gradient(circle at 20% 20%, rgba(52, 152, 219, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(46, 204, 113, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 60%, rgba(155, 89, 182, 0.1) 0%, transparent 50%);
+        z-index: -1;
+    }
+    
+    @media (max-width: 576px) {
+        .login-card {
+            margin: 20px;
+        }
+        
+        .login-header {
+            padding: 30px 20px;
+        }
+        
+        .login-body {
+            padding: 30px 20px;
+        }
+        
+        .login-footer {
+            padding: 15px 20px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="medical-bg"></div>
+<div class="medical-pattern"></div>
+
+<div class="login-container">
+    <div class="login-card">
+        <!-- Login Header -->
+        <div class="login-header">
+            <div class="mb-3">
+                <i class="fas fa-user-md"></i>
+            </div>
+            <h2 class="h3 mb-2">Medical AI System</h2>
+            <p class="mb-0">Sign in to your account</p>
+        </div>
+        
+        <!-- Login Form -->
+        <div class="login-body">
+            {% if messages %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {% for message in messages %}
+                        <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                    {% endfor %}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+            
+            {% if form.errors or form.non_field_errors %}
+                <div class="error-messages">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Login Failed</strong>
+                    {% if form.non_field_errors %}
+                        <ul class="mb-0 mt-2">
+                            {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <ul class="mb-0 mt-2">
+                            {% if form.username.errors %}
+                                {% for error in form.username.errors %}
+                                    <li>Username: {{ error }}</li>
+                                {% endfor %}
+                            {% endif %}
+                            {% if form.password.errors %}
+                                {% for error in form.password.errors %}
+                                    <li>Password: {{ error }}</li>
+                                {% endfor %}
+                            {% endif %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+            
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <!-- Username Field -->
+                <div class="form-floating">
+                    <input 
+                        type="text" 
+                        class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
+                        id="id_username" 
+                        name="username" 
+                        placeholder="Username"
+                        value="{{ form.username.value|default:'' }}"
+                        required
+                        autocomplete="username"
+                        autofocus
+                    >
+                    <label for="id_username">
+                        <i class="fas fa-user me-2"></i>Username
+                    </label>
+                </div>
+                
+                <!-- Password Field -->
+                <div class="form-floating">
+                    <input 
+                        type="password" 
+                        class="form-control {% if form.password.errors %}is-invalid{% endif %}" 
+                        id="id_password" 
+                        name="password" 
+                        placeholder="Password"
+                        required
+                        autocomplete="current-password"
+                    >
+                    <label for="id_password">
+                        <i class="fas fa-lock me-2"></i>Password
+                    </label>
+                </div>
+                
+                <!-- Role Selection -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">
+                        <i class="fas fa-user-tag me-2"></i>Login As:
+                    </label>
+                    <div class="role-selector">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="role" id="role_nurse" value="nurse" autocomplete="off" checked>
+                                <label class="btn btn-outline-primary w-100 role-btn" for="role_nurse">
+                                    <i class="fas fa-user-nurse d-block mb-2" style="font-size: 2rem;"></i>
+                                    <span class="d-block fw-bold">Nurse</span>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="role" id="role_doctor" value="doctor" autocomplete="off">
+                                <label class="btn btn-outline-success w-100 role-btn" for="role_doctor">
+                                    <i class="fas fa-user-md d-block mb-2" style="font-size: 2rem;"></i>
+                                    <span class="d-block fw-bold">Doctor</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Remember Me Checkbox -->
+                <div class="remember-me">
+                    <div class="form-check">
+                        <input 
+                            class="form-check-input" 
+                            type="checkbox" 
+                            id="remember_me" 
+                            name="remember_me"
+                        >
+                        <label class="form-check-label" for="remember_me">
+                            <i class="fas fa-clock me-1"></i>
+                            Remember me for 30 days
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Login Button -->
+                <button type="submit" class="btn btn-primary btn-login">
+                    <i class="fas fa-sign-in-alt me-2"></i>
+                    Sign In
+                </button>
+                
+                <!-- Hidden field for next URL -->
+                {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+            </form>
+        </div>
+        
+        <!-- Login Footer -->
+        <div class="login-footer">
+            <div class="row text-center">
+                <div class="col-12 mb-3">
+                    <small class="text-muted">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Secure medical platform
+                    </small>
+                </div>
+                
+                <div class="col-12">
+                    <div class="d-flex justify-content-center align-items-center">
+                        <small class="text-muted me-3">
+                            <a href="#" class="text-decoration-none">
+                                <i class="fas fa-question-circle me-1"></i>
+                                Need Help?
+                            </a>
+                        </small>
+                        <small class="text-muted">
+                            <a href="/admin/" class="text-decoration-none">
+                                <i class="fas fa-tools me-1"></i>
+                                Admin Panel
+                            </a>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Login Info (for demo purposes) -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;">
+    <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="fas fa-info-circle text-primary me-2"></i>
+            <strong class="me-auto">Demo Credentials</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            <strong>Username:</strong> admin<br>
+            <strong>Password:</strong> admin123
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-fill demo credentials (remove in production)
+    const demoBtn = document.createElement('button');
+    demoBtn.innerHTML = '<i class="fas fa-magic me-1"></i>Use Demo Credentials';
+    demoBtn.className = 'btn btn-outline-secondary btn-sm mt-2 w-100';
+    demoBtn.type = 'button';
+    demoBtn.onclick = function() {
+        document.getElementById('id_username').value = 'admin';
+        document.getElementById('id_password').value = 'admin123';
+    };
+    
+    // Add demo button after the login button
+    const loginBtn = document.querySelector('.btn-login');
+    loginBtn.parentNode.insertBefore(demoBtn, loginBtn.nextSibling);
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const username = document.getElementById('id_username').value.trim();
+        const password = document.getElementById('id_password').value;
+        
+        if (!username || !password) {
+            e.preventDefault();
+            
+            // Show custom error
+            let errorDiv = document.querySelector('.error-messages');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.className = 'error-messages';
+                form.insertBefore(errorDiv, form.firstChild);
+            }
+            
+            errorDiv.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Validation Error</strong>
+                <ul class="mb-0 mt-2">
+                    ${!username ? '<li>Username is required</li>' : ''}
+                    ${!password ? '<li>Password is required</li>' : ''}
+                </ul>
+            `;
+            
+            // Add invalid classes
+            if (!username) {
+                document.getElementById('id_username').classList.add('is-invalid');
+            }
+            if (!password) {
+                document.getElementById('id_password').classList.add('is-invalid');
+            }
+        }
+    });
+    
+    // Remove invalid class on input
+    document.querySelectorAll('.form-control').forEach(function(input) {
+        input.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+            const errorDiv = document.querySelector('.error-messages');
+            if (errorDiv && this.value.trim()) {
+                // Check if all fields are now valid
+                const allValid = Array.from(document.querySelectorAll('.form-control')).every(
+                    el => el.value.trim() && !el.classList.contains('is-invalid')
+                );
+                if (allValid) {
+                    errorDiv.remove();
+                }
+            }
+        });
+    });
+    
+    // Auto-dismiss toast after 10 seconds
+    setTimeout(function() {
+        const toast = document.querySelector('.toast');
+        if (toast) {
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.hide();
+        }
+    }, 10000);
+});
+</script>
+{% endblock %}

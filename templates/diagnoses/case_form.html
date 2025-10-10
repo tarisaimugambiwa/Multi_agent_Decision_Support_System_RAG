@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Medical AI System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ai-assistance {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        color: white;
+    }
+    
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .patient-info {
+        background: #e8f4f8;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px 0;
+        display: none;
+    }
+    
+    .triage-result {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 5px;
+    }
+    
+    .triage-critical { background-color: #f8d7da; border-left: 4px solid #dc3545; }
+    .triage-high { background-color: #fff3cd; border-left: 4px solid #ffc107; }
+    .triage-moderate { background-color: #cce5ff; border-left: 4px solid #007bff; }
+    .triage-low { background-color: #d4edda; border-left: 4px solid #28a745; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-stethoscope me-2"></i>{{ title }}</h4>
+                </div>
+                <div class="card-body">
+                    <!-- AI Assistance Banner -->
+                    <div class="ai-assistance">
+                        <h5><i class="fas fa-robot me-2"></i>AI-Powered Diagnosis</h5>
+                        <p class="mb-0">Our AI system will analyze the symptoms and patient history to provide diagnostic suggestions and determine case urgency automatically.</p>
+                    </div>
+
+                    <form method="post" id="case-form">
+                        {% csrf_token %}
+                        
+                        <!-- Patient Selection -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-user me-2"></i>Patient Information</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="{{ form.patient.id_for_label }}" class="form-label">Patient *</label>
+                                    {{ form.patient }}
+                                    {% if form.patient.errors %}
+                                        <div class="text-danger">{{ form.patient.errors }}</div>
+                                    {% endif %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Don't see the patient? 
+                                            <a href="{% url 'patients:patient_create' %}" class="fw-bold" target="_blank">
+                                                <i class="fas fa-plus-circle me-1"></i>Create New Patient
+                                            </a>
+                                            or 
+                                            <a href="{% url 'patients:patient_list' %}" class="fw-bold" target="_blank">
+                                                <i class="fas fa-search me-1"></i>View All Patients
+                                            </a>
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-outline-info mt-4" id="load-patient-history">
+                                        <i class="fas fa-history me-2"></i>Load Patient History
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Patient History Display -->
+                            <div id="patient-history" class="patient-info">
+                                <h6><i class="fas fa-file-medical-alt me-2"></i>Patient History</h6>
+                                <div id="history-content"></div>
+                            </div>
+                        </div>
+
+                        <!-- Symptoms and Chief Complaints -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-notes-medical me-2"></i>Symptoms & Chief Complaints</h5>
+                            <label for="{{ form.symptoms.id_for_label }}" class="form-label">Symptoms *</label>
+                            {{ form.symptoms }}
+                            {% if form.symptoms.errors %}
+                                <div class="text-danger">{{ form.symptoms.errors }}</div>
+                            {% endif %}
+                            
+                            <button type="button" class="btn btn-outline-success mt-2" id="quick-triage">
+                                <i class="fas fa-tachometer-alt me-2"></i>Quick Triage Analysis
+                            </button>
+                            <div id="triage-result"></div>
+                        </div>
+
+                        <!-- Vital Signs -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-heartbeat me-2"></i>Vital Signs</h5>
+                            <p class="text-muted small mb-3">Enter the patient's vital signs. Leave blank if not available.</p>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="temperature" class="form-label">Temperature (°F)</label>
+                                    <input type="number" step="0.1" class="form-control" id="temperature" name="temperature" placeholder="98.6">
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label for="heart_rate" class="form-label">Heart Rate (BPM)</label>
+                                    <input type="number" class="form-control" id="heart_rate" name="heart_rate" placeholder="72">
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label for="blood_pressure_systolic" class="form-label">BP Systolic (mmHg)</label>
+                                    <input type="number" class="form-control" id="blood_pressure_systolic" name="blood_pressure_systolic" placeholder="120">
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label for="blood_pressure_diastolic" class="form-label">BP Diastolic (mmHg)</label>
+                                    <input type="number" class="form-control" id="blood_pressure_diastolic" name="blood_pressure_diastolic" placeholder="80">
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label for="respiratory_rate" class="form-label">Respiratory Rate (/min)</label>
+                                    <input type="number" class="form-control" id="respiratory_rate" name="respiratory_rate" placeholder="16">
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label for="oxygen_saturation" class="form-label">Oxygen Saturation (%)</label>
+                                    <input type="number" class="form-control" id="oxygen_saturation" name="oxygen_saturation" placeholder="98">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Priority and Status -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-exclamation-triangle me-2"></i>Case Priority</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="{{ form.priority.id_for_label }}" class="form-label">Priority Level</label>
+                                    {{ form.priority }}
+                                    {% if form.priority.errors %}
+                                        <div class="text-danger">{{ form.priority.errors }}</div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">AI will suggest priority based on symptoms if left as Medium</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'diagnoses:case_list' %}" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submit-btn">
+                                <i class="fas fa-save me-2"></i>Create Case & Generate AI Diagnosis
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar with Help -->
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="fas fa-info-circle me-2"></i>AI Diagnosis Help</h5>
+                </div>
+                <div class="card-body">
+                    <h6>How AI Diagnosis Works:</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-search text-primary me-2"></i>Searches medical knowledge base</li>
+                        <li><i class="fas fa-brain text-success me-2"></i>Applies clinical reasoning rules</li>
+                        <li><i class="fas fa-chart-line text-warning me-2"></i>Calculates symptom severity</li>
+                        <li><i class="fas fa-flag text-danger me-2"></i>Determines case urgency</li>
+                    </ul>
+
+                    <h6 class="mt-3">Tips for Better Results:</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success me-2"></i>Describe symptoms clearly</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Include onset and duration</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Mention severity (mild/moderate/severe)</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Note associated symptoms</li>
+                    </ul>
+
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Important:</strong> AI diagnosis is for assistance only. Always use clinical judgment.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Load patient history when patient is selected
+    $('#load-patient-history').click(function() {
+        const patientId = $('#id_patient').val();
+        if (!patientId) {
+            alert('Please select a patient first.');
+            return;
+        }
+
+        $.ajax({
+            url: "{% url 'diagnoses:patient_history_ajax' 0 %}".replace('0', patientId),
+            method: 'GET',
+            success: function(data) {
+                let historyHtml = `
+                    <p><strong>Name:</strong> ${data.patient_name}</p>
+                    <p><strong>Age:</strong> ${data.age || 'Unknown'}</p>
+                    <p><strong>Gender:</strong> ${data.gender}</p>
+                    <p><strong>Allergies:</strong> ${data.allergies}</p>
+                `;
+
+                if (data.recent_diagnoses && data.recent_diagnoses.length > 0) {
+                    historyHtml += '<h6>Recent Diagnoses:</h6><ul>';
+                    data.recent_diagnoses.forEach(function(diagnosis) {
+                        historyHtml += `<li>${diagnosis.date}: ${diagnosis.diagnosis} (${diagnosis.provider})</li>`;
+                    });
+                    historyHtml += '</ul>';
+                } else {
+                    historyHtml += '<p><em>No recent diagnoses on record.</em></p>';
+                }
+
+                $('#history-content').html(historyHtml);
+                $('#patient-history').slideDown();
+            },
+            error: function(xhr) {
+                alert('Error loading patient history: ' + (xhr.responseJSON?.error || 'Unknown error'));
+            }
+        });
+    });
+
+    // Quick triage analysis
+    $('#quick-triage').click(function() {
+        const symptoms = $('#id_symptoms').val().trim();
+        if (!symptoms) {
+            alert('Please enter symptoms first.');
+            return;
+        }
+
+        $.ajax({
+            url: "{% url 'diagnoses:quick_triage_ajax' %}",
+            method: 'POST',
+            data: {
+                'symptoms': symptoms,
+                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(data) {
+                const urgencyClass = `triage-${data.urgency_level}`;
+                const resultHtml = `
+                    <div class="triage-result ${urgencyClass}">
+                        <strong>Triage Analysis:</strong> ${data.message}
+                        <br><small>AI Urgency: ${data.urgency_level.toUpperCase()}</small>
+                    </div>
+                `;
+                $('#triage-result').html(resultHtml);
+
+                // Update priority if AI suggests different level
+                if (data.recommended_priority) {
+                    $('#id_priority').val(data.recommended_priority);
+                }
+            },
+            error: function(xhr) {
+                $('#triage-result').html(`
+                    <div class="alert alert-danger">
+                        Error: ${xhr.responseJSON?.error || 'Triage analysis failed'}
+                    </div>
+                `);
+            }
+        });
+    });
+
+    // Form submission with loading state
+    $('#case-form').submit(function(e) {
+        // Prepare vital signs data from individual fields
+        const vitalSigns = {};
+        
+        const temperature = $('#temperature').val();
+        if (temperature) vitalSigns.temperature = parseFloat(temperature);
+        
+        const systolic = $('#blood_pressure_systolic').val();
+        const diastolic = $('#blood_pressure_diastolic').val();
+        if (systolic && diastolic) {
+            vitalSigns.blood_pressure = `${systolic}/${diastolic}`;
+        }
+        
+        const heartRate = $('#heart_rate').val();
+        if (heartRate) vitalSigns.heart_rate = parseInt(heartRate);
+        
+        const respRate = $('#respiratory_rate').val();
+        if (respRate) vitalSigns.respiratory_rate = parseInt(respRate);
+        
+        const o2sat = $('#oxygen_saturation').val();
+        if (o2sat) vitalSigns.oxygen_saturation = parseInt(o2sat);
+        
+        // Add hidden field with JSON data
+        if (!$('input[name="vital_signs"]').length) {
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'vital_signs',
+                value: JSON.stringify(vitalSigns)
+            }).appendTo('#case-form');
+        } else {
+            $('input[name="vital_signs"]').val(JSON.stringify(vitalSigns));
+        }
+        
+        $('#submit-btn').prop('disabled', true).html(
+            '<i class="fas fa-spinner fa-spin me-2"></i>Creating Case & Running AI Analysis...'
+        );
+    });
+});
+</script>
+{% endblock %}

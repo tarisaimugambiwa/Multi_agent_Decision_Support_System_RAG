@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload Document - Knowledge Base{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .upload-form-box {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .upload-zone {
+        border: 3px dashed #667eea;
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .upload-zone:hover {
+        background: #e7f1ff;
+        border-color: #764ba2;
+    }
+    
+    .upload-zone.dragover {
+        background: #e3f2fd;
+        border-color: #1976d2;
+    }
+    
+    .upload-icon {
+        font-size: 4rem;
+        color: #667eea;
+        margin-bottom: 20px;
+    }
+    
+    .form-section {
+        padding: 25px 0;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+    }
+    
+    .section-title {
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 20px;
+        font-size: 1.2rem;
+    }
+    
+    .help-box {
+        background: #e3f2fd;
+        border-left: 4px solid #1976d2;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+    }
+    
+    .supported-formats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .format-badge {
+        background: white;
+        border: 2px solid #667eea;
+        color: #667eea;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="upload-header">
+        <div class="mb-2">
+            <a href="{% url 'knowledge:dashboard' %}" class="btn btn-sm btn-light">
+                <i class="fas fa-arrow-left me-2"></i>Back to Knowledge Base
+            </a>
+        </div>
+        <h1 class="mb-2">
+            <i class="fas fa-cloud-upload-alt me-2"></i>
+            Upload Medical Document
+        </h1>
+        <p class="mb-0 opacity-90">
+            Add new documents to the knowledge base for AI-powered diagnosis support
+        </p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="upload-form-box">
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
+                    {% csrf_token %}
+                    
+                    <!-- File Upload Section -->
+                    <div class="form-section">
+                        <div class="section-title">
+                            <i class="fas fa-file-upload me-2"></i>Upload File (Optional)
+                        </div>
+                        
+                        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <h4>Drag & Drop or Click to Browse</h4>
+                            <p class="text-muted mb-0">Upload PDF, Word, or Text files</p>
+                            <div class="supported-formats">
+                                <span class="format-badge">PDF</span>
+                                <span class="format-badge">DOCX</span>
+                                <span class="format-badge">TXT</span>
+                            </div>
+                        </div>
+                        <input type="file" 
+                               id="fileInput" 
+                               name="file" 
+                               class="d-none" 
+                               accept=".pdf,.docx,.txt"
+                               onchange="showFileName(this)">
+                        <div id="fileName" class="mt-2 text-center text-primary fw-bold"></div>
+                    </div>
+
+                    <!-- Document Information -->
+                    <div class="form-section">
+                        <div class="section-title">
+                            <i class="fas fa-info-circle me-2"></i>Document Information
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label fw-bold">
+                                Document Title <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="title" 
+                                   name="title" 
+                                   placeholder="e.g., WHO Guidelines for Pediatric Care"
+                                   required>
+                            <small class="text-muted">A clear, descriptive title for the document</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="document_type" class="form-label fw-bold">
+                                Document Type <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="document_type" name="document_type" required>
+                                <option value="">Select Type...</option>
+                                {% for choice in document_types %}
+                                <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Categorize this document</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="content" class="form-label fw-bold">
+                                Document Content <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" 
+                                      id="content" 
+                                      name="content" 
+                                      rows="10" 
+                                      placeholder="Paste or type the document content here..."
+                                      required></textarea>
+                            <small class="text-muted">
+                                Full text content of the document. If you uploaded a file, this will be filled automatically.
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Additional Metadata -->
+                    <div class="form-section">
+                        <div class="section-title">
+                            <i class="fas fa-tags me-2"></i>Additional Details (Optional)
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="author" class="form-label fw-bold">
+                                    Author(s)
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="author" 
+                                       name="author" 
+                                       placeholder="e.g., Dr. John Smith, WHO">
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="source" class="form-label fw-bold">
+                                    Source/Publisher
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="source" 
+                                       name="source" 
+                                       placeholder="e.g., World Health Organization">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Buttons -->
+                    <div class="d-flex gap-2 justify-content-end mt-4">
+                        <a href="{% url 'knowledge:dashboard' %}" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-check me-2"></i>Upload Document
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Help Sidebar -->
+        <div class="col-lg-4">
+            <div class="help-box mb-3">
+                <h5 class="mb-3">
+                    <i class="fas fa-lightbulb me-2"></i>Upload Tips
+                </h5>
+                <ul class="mb-0 ps-3">
+                    <li class="mb-2">Supported formats: PDF, DOCX, TXT</li>
+                    <li class="mb-2">Choose the appropriate document type for better organization</li>
+                    <li class="mb-2">Include author and source information when available</li>
+                    <li class="mb-2">Documents are automatically indexed for AI search</li>
+                </ul>
+            </div>
+
+            <div class="help-box mb-3">
+                <h5 class="mb-3">
+                    <i class="fas fa-robot me-2"></i>AI Processing
+                </h5>
+                <p class="mb-0">
+                    Once uploaded, your document will be:
+                </p>
+                <ul class="mt-2 mb-0 ps-3">
+                    <li class="mb-2">Automatically indexed in the vector database</li>
+                    <li class="mb-2">Available for AI-powered search</li>
+                    <li class="mb-2">Used to support diagnosis recommendations</li>
+                </ul>
+            </div>
+
+            <div class="help-box">
+                <h5 class="mb-3">
+                    <i class="fas fa-shield-alt me-2"></i>Privacy & Security
+                </h5>
+                <p class="mb-0 small">
+                    All uploaded documents are stored securely and used solely for medical decision support. 
+                    Ensure you have the right to upload any copyrighted material.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showFileName(input) {
+    const fileName = input.files[0]?.name;
+    if (fileName) {
+        document.getElementById('fileName').innerHTML = 
+            '<i class="fas fa-file me-2"></i>Selected: ' + fileName;
+    }
+}
+
+// Drag and drop functionality
+const uploadZone = document.querySelector('.upload-zone');
+const fileInput = document.getElementById('fileInput');
+
+uploadZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadZone.classList.add('dragover');
+});
+
+uploadZone.addEventListener('dragleave', () => {
+    uploadZone.classList.remove('dragover');
+});
+
+uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        fileInput.files = files;
+        showFileName(fileInput);
+    }
+});
+</script>
+{% endblock %}

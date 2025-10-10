@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ document.title }} - Knowledge Base{% endblock %}
+
+{% block extra_css %}
+<style>
+    .document-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .document-content-box {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }
+    
+    .document-meta-box {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .meta-item {
+        padding: 12px 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .meta-item:last-child {
+        border-bottom: none;
+    }
+    
+    .meta-label {
+        font-weight: 600;
+        color: #667eea;
+        margin-right: 10px;
+    }
+    
+    .document-content {
+        line-height: 1.8;
+        color: #333;
+        font-size: 1.05rem;
+    }
+    
+    .document-content h1, 
+    .document-content h2, 
+    .document-content h3 {
+        color: #667eea;
+        margin-top: 25px;
+        margin-bottom: 15px;
+    }
+    
+    .document-content p {
+        margin-bottom: 15px;
+    }
+    
+    .doc-type-badge {
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .type-guideline { background: #e3f2fd; color: #1976d2; }
+    .type-protocol { background: #f3e5f5; color: #7b1fa2; }
+    .type-research { background: #e8f5e9; color: #2e7d32; }
+    .type-manual { background: #fff3e0; color: #ef6c00; }
+    .type-case_study { background: #fce4ec; color: #c2185b; }
+    .type-drug_info { background: #e0f2f1; color: #00695c; }
+    .type-procedure { background: #f1f8e9; color: #558b2f; }
+    .type-reference { background: #eceff1; color: #455a64; }
+    .type-training { background: #fff8e1; color: #f57f17; }
+    .type-other { background: #f5f5f5; color: #616161; }
+    
+    .related-doc {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+        border-left: 3px solid #667eea;
+        transition: all 0.2s ease;
+    }
+    
+    .related-doc:hover {
+        background: #f8f9fa;
+        transform: translateX(5px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="document-header">
+        <div class="mb-2">
+            <a href="{% url 'knowledge:document_list' %}" class="btn btn-sm btn-light">
+                <i class="fas fa-arrow-left me-2"></i>Back to Library
+            </a>
+        </div>
+        <h1 class="mb-3">
+            <i class="fas fa-file-medical me-2"></i>
+            {{ document.title }}
+        </h1>
+        <div class="d-flex align-items-center gap-3">
+            <span class="doc-type-badge type-{{ document.document_type|lower }}">
+                {{ document.get_document_type_display }}
+            </span>
+            {% if document.source %}
+            <span>
+                <i class="fas fa-building me-2"></i>{{ document.source }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <div class="document-content-box">
+                <div class="document-content">
+                    {{ document.content|linebreaks }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Document Metadata -->
+            <div class="document-meta-box">
+                <h5 class="mb-3">
+                    <i class="fas fa-info-circle me-2"></i>Document Information
+                </h5>
+                
+                {% if document.author %}
+                <div class="meta-item">
+                    <div class="meta-label">
+                        <i class="fas fa-user me-2"></i>Author
+                    </div>
+                    <div>{{ document.author }}</div>
+                </div>
+                {% endif %}
+                
+                {% if document.publication_date %}
+                <div class="meta-item">
+                    <div class="meta-label">
+                        <i class="fas fa-calendar-alt me-2"></i>Published
+                    </div>
+                    <div>{{ document.publication_date|date:"F d, Y" }}</div>
+                </div>
+                {% endif %}
+                
+                <div class="meta-item">
+                    <div class="meta-label">
+                        <i class="fas fa-clock me-2"></i>Uploaded
+                    </div>
+                    <div>{{ document.upload_date|date:"F d, Y - g:i A" }}</div>
+                </div>
+                
+                <div class="meta-item">
+                    <div class="meta-label">
+                        <i class="fas fa-user-plus me-2"></i>Uploaded By
+                    </div>
+                    <div>{{ document.uploaded_by.get_full_name|default:document.uploaded_by.username }}</div>
+                </div>
+                
+                <div class="meta-item">
+                    <div class="meta-label">
+                        <i class="fas fa-align-left me-2"></i>Word Count
+                    </div>
+                    <div>{{ document.content|wordcount }} words</div>
+                </div>
+                
+                {% if document.tags %}
+                <div class="meta-item">
+                    <div class="meta-label">
+                        <i class="fas fa-tags me-2"></i>Tags
+                    </div>
+                    <div>{{ document.tags }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Actions -->
+            <div class="document-meta-box">
+                <h5 class="mb-3">
+                    <i class="fas fa-bolt me-2"></i>Actions
+                </h5>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'knowledge:search' %}?q={{ document.title|urlencode }}" class="btn btn-outline-primary">
+                        <i class="fas fa-search me-2"></i>Find Similar
+                    </a>
+                    {% if user.is_staff %}
+                    <a href="{% url 'admin:knowledge_knowledgedocument_change' document.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-edit me-2"></i>Edit Document
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Related Documents -->
+            {% if related_documents %}
+            <div class="document-meta-box">
+                <h5 class="mb-3">
+                    <i class="fas fa-link me-2"></i>Related Documents
+                </h5>
+                {% for related in related_documents %}
+                <div class="related-doc">
+                    <a href="{% url 'knowledge:document_detail' related.pk %}" class="text-decoration-none">
+                        <div class="mb-1">
+                            <strong class="text-primary">{{ related.title|truncatewords:10 }}</strong>
+                        </div>
+                        <div class="text-muted small">
+                            <i class="fas fa-calendar me-1"></i>
+                            {{ related.upload_date|date:"M d, Y" }}
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'knowledge:document_list' %}?type={{ document.document_type }}" class="btn btn-sm btn-outline-primary">
+                        View All {{ document.get_document_type_display }} Documents
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

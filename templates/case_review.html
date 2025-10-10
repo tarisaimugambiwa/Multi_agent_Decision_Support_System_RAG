@@ -1,0 +1,950 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Case Review #{{ case.id }} - Medical AI System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .case-header {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        color: white;
+    }
+    
+    .case-section {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .section-header {
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: between;
+        align-items: center;
+    }
+    
+    .section-title {
+        color: #495057;
+        font-weight: 600;
+        font-size: 1.2rem;
+        margin: 0;
+    }
+    
+    .patient-header-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-left: 5px solid #dc3545;
+    }
+    
+    .patient-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.8rem;
+        margin-right: 20px;
+        flex-shrink: 0;
+    }
+    
+    .patient-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .patient-details h3 {
+        margin-bottom: 5px;
+        color: #2c3e50;
+    }
+    
+    .patient-meta {
+        color: #6c757d;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    
+    .case-status-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .status-pending { background-color: #ffc107; color: #212529; }
+    .status-in-progress { background-color: #17a2b8; color: white; }
+    .status-doctor-review { background-color: #dc3545; color: white; }
+    .status-completed { background-color: #28a745; color: white; }
+    
+    .priority-badge {
+        padding: 6px 12px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .priority-critical { background-color: #dc3545; color: white; }
+    .priority-urgent { background-color: #fd7e14; color: white; }
+    .priority-high { background-color: #ffc107; color: #212529; }
+    .priority-medium { background-color: #6c757d; color: white; }
+    .priority-low { background-color: #28a745; color: white; }
+    
+    .symptoms-display {
+        background: #f8f9fa;
+        border-left: 4px solid #17a2b8;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 15px 0;
+    }
+    
+    .vital-signs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+    }
+    
+    .vital-sign-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        border: 2px solid #e9ecef;
+    }
+    
+    .vital-value {
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+    
+    .vital-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .ai-diagnosis-section {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-left: 5px solid #2196f3;
+    }
+    
+    .ai-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .ai-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2196f3, #1976d2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+        margin-right: 15px;
+    }
+    
+    .confidence-display {
+        display: flex;
+        align-items: center;
+        margin: 15px 0;
+    }
+    
+    .confidence-bar-container {
+        flex-grow: 1;
+        height: 20px;
+        background-color: #e9ecef;
+        border-radius: 10px;
+        margin: 0 15px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .confidence-bar {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
+    
+    .confidence-high { background: linear-gradient(135deg, #28a745, #20c997); }
+    .confidence-medium { background: linear-gradient(135deg, #ffc107, #fd7e14); }
+    .confidence-low { background: linear-gradient(135deg, #dc3545, #c82333); }
+    
+    .diagnosis-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 15px 0;
+        border-left: 4px solid #28a745;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .diagnosis-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+    
+    .diagnosis-confidence {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 8px;
+    }
+    
+    .urgency-indicator {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 10px;
+    }
+    
+    .urgency-critical { background-color: #dc3545; color: white; }
+    .urgency-high { background-color: #fd7e14; color: white; }
+    .urgency-moderate { background-color: #ffc107; color: #212529; }
+    .urgency-low { background-color: #28a745; color: white; }
+    
+    .treatment-recommendations {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 15px 0;
+    }
+    
+    .doctor-review-form {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        border-left: 5px solid #28a745;
+    }
+    
+    .review-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .review-option {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .review-option:hover {
+        border-color: #007bff;
+        box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+    }
+    
+    .review-option.selected {
+        border-color: #28a745;
+        background: #f8fff8;
+        box-shadow: 0 4px 12px rgba(40,167,69,0.15);
+    }
+    
+    .review-option-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+    
+    .option-approve .review-option-icon { color: #28a745; }
+    .option-modify .review-option-icon { color: #ffc107; }
+    .option-reject .review-option-icon { color: #dc3545; }
+    
+    .doctor-notes-section {
+        margin-top: 25px;
+    }
+    
+    .notes-textarea {
+        min-height: 150px;
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 15px;
+        font-size: 1rem;
+        line-height: 1.6;
+        resize: vertical;
+    }
+    
+    .notes-textarea:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40,167,69,0.25);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: end;
+        margin-top: 25px;
+        padding-top: 20px;
+        border-top: 2px solid #e9ecef;
+    }
+    
+    .btn-review-submit {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-review-submit:hover {
+        background: linear-gradient(135deg, #218838, #1fb388);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(40,167,69,0.3);
+    }
+    
+    .btn-review-submit:disabled {
+        background: #6c757d;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .case-timeline {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+    }
+    
+    .timeline-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .timeline-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .timeline-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.9rem;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+    
+    .timeline-created { background-color: #17a2b8; }
+    .timeline-ai { background-color: #6f42c1; }
+    .timeline-review { background-color: #dc3545; }
+    
+    .nurse-info-card {
+        background: #fff5f5;
+        border-left: 4px solid #e91e63;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    @media (max-width: 768px) {
+        .patient-info {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .patient-avatar {
+            margin-right: 0;
+            margin-bottom: 15px;
+        }
+        
+        .vital-signs-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .review-options {
+            grid-template-columns: 1fr;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'doctor_dashboard' %}">Doctor Dashboard</a></li>
+        <li class="breadcrumb-item active">Case Review #{{ case.id }}</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Case Header -->
+    <div class="case-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2><i class="fas fa-clipboard-check me-3"></i>Case Review #{{ case.id }}</h2>
+                <p class="mb-0 opacity-75">Expert medical review of AI-assisted diagnosis</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="d-flex align-items-center justify-content-md-end">
+                    <span class="case-status-badge status-{{ case.status|lower }}">
+                        {{ case.get_status_display }}
+                    </span>
+                    <span class="priority-badge priority-{{ case.priority|lower }} ms-2">
+                        {{ case.get_priority_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Patient Information -->
+            <div class="patient-header-card">
+                <div class="patient-info">
+                    <div class="patient-avatar">
+                        {{ case.patient.first_name.0 }}{{ case.patient.last_name.0 }}
+                    </div>
+                    <div class="patient-details">
+                        <h3>{{ case.patient.full_name }}</h3>
+                        <div class="patient-meta">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Patient ID:</strong> {{ case.patient.id }}<br>
+                                    <strong>Age:</strong> {{ case.patient.age|default:"Unknown" }} years<br>
+                                    <strong>Gender:</strong> {{ case.patient.get_gender_display }}<br>
+                                    <strong>Phone:</strong> {{ case.patient.phone_number|default:"N/A" }}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Email:</strong> {{ case.patient.email|default:"N/A" }}<br>
+                                    <strong>Emergency Contact:</strong> {{ case.patient.emergency_contact|default:"N/A" }}<br>
+                                    <strong>Insurance:</strong> {% if case.patient.insurance_info %}Insured{% else %}Uninsured{% endif %}
+                                </div>
+                            </div>
+                            {% if case.patient.allergies %}
+                                <div class="mt-2 alert alert-warning">
+                                    <strong class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Allergies:</strong> {{ case.patient.allergies }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Symptoms and Clinical Data -->
+            <div class="case-section">
+                <div class="section-header">
+                    <h4 class="section-title">
+                        <i class="fas fa-notes-medical me-2 text-warning"></i>Clinical Presentation
+                    </h4>
+                </div>
+                
+                <h5>Patient Symptoms</h5>
+                <div class="symptoms-display">
+                    <p class="mb-0">{{ case.symptoms }}</p>
+                </div>
+
+                {% if case.vital_signs %}
+                    <h5 class="mt-4">Vital Signs</h5>
+                    <div class="vital-signs-grid">
+                        {% for key, value in case.vital_signs.items %}
+                            <div class="vital-sign-card">
+                                <div class="vital-value">{{ value }}</div>
+                                <div class="vital-label">{{ key|title|cut:"_" }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- AI Diagnosis Section -->
+            {% if case.ai_diagnosis_parsed %}
+                <div class="ai-diagnosis-section">
+                    <div class="ai-header">
+                        <div class="ai-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1">AI Diagnosis Analysis</h4>
+                            <small class="text-muted">Generated on {{ case.created_at|date:"M d, Y \a\t H:i" }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Overall Confidence -->
+                    <div class="confidence-display">
+                        <strong>Overall Confidence:</strong>
+                        <div class="confidence-bar-container">
+                            {% with confidence=case.ai_diagnosis_parsed.diagnostic_confidence|default:0 %}
+                                <div class="confidence-bar {% if confidence >= 0.7 %}confidence-high{% elif confidence >= 0.4 %}confidence-medium{% else %}confidence-low{% endif %}" 
+                                     data-confidence="{{ confidence|floatformat:0 }}">
+                                    {{ confidence|floatformat:0 }}&#37;
+                                </div>
+                            {% endwith %}
+                        </div>
+                        <span class="badge bg-info">{{ case.ai_diagnosis_parsed.severity_score|default:0 }} Severity</span>
+                    </div>
+
+                    <!-- Primary Diagnoses -->
+                    {% if case.ai_diagnosis_parsed.primary_diagnoses %}
+                        <h5>Primary Diagnoses</h5>
+                        {% for diagnosis in case.ai_diagnosis_parsed.primary_diagnoses %}
+                            <div class="diagnosis-card">
+                                <div class="diagnosis-title">{{ diagnosis.condition }}</div>
+                                <div class="diagnosis-confidence">
+                                    Confidence: {{ diagnosis.confidence|floatformat:1 }}
+                                    {% if diagnosis.urgency %}
+                                        <span class="urgency-indicator urgency-{{ diagnosis.urgency }}">
+                                            {{ diagnosis.urgency|capfirst }} Priority
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                {% if diagnosis.supporting_symptoms %}
+                                    <small class="text-muted">Supporting symptoms: {{ diagnosis.supporting_symptoms }}</small>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Treatment Recommendations -->
+                    {% if case.ai_diagnosis_parsed.treatment_recommendations %}
+                        <div class="treatment-recommendations">
+                            <h6><i class="fas fa-pills me-2"></i>AI Treatment Recommendations</h6>
+                            <ul class="mb-0">
+                                {% for recommendation in case.ai_diagnosis_parsed.treatment_recommendations %}
+                                    <li>{{ recommendation }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    <!-- AI Recommendations -->
+                    {% if case.ai_diagnosis_parsed.recommendations %}
+                        <div class="mt-3">
+                            <h6><i class="fas fa-lightbulb me-2"></i>Clinical Recommendations</h6>
+                            <ul class="mb-0">
+                                {% for rec in case.ai_diagnosis_parsed.recommendations %}
+                                    <li>{{ rec }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    <!-- Urgency Assessment -->
+                    {% if case.ai_diagnosis_parsed.urgency_level %}
+                        <div class="mt-3">
+                            <strong>AI Urgency Assessment:</strong>
+                            <span class="urgency-indicator urgency-{{ case.ai_diagnosis_parsed.urgency_level }}">
+                                {{ case.ai_diagnosis_parsed.urgency_level|capfirst }} Urgency
+                            </span>
+                            {% if case.ai_diagnosis_parsed.follow_up_required %}
+                                <span class="badge bg-warning ms-2">Follow-up Required</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="case-section">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>No AI Diagnosis Available</strong><br>
+                        This case was created without AI analysis or the analysis failed. Please provide your expert diagnosis.
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Doctor Review Form -->
+            <div class="case-section">
+                <div class="doctor-review-form">
+                    <div class="section-header">
+                        <h4 class="section-title">
+                            <i class="fas fa-user-md me-2 text-success"></i>Doctor Review & Decision
+                        </h4>
+                    </div>
+
+                    <form id="review-form" method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Review Options -->
+                        <div class="review-options">
+                            <div class="review-option option-approve" data-decision="approve">
+                                <div class="review-option-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <h6>Approve AI Diagnosis</h6>
+                                <p class="small text-muted">Accept the AI diagnosis as accurate</p>
+                            </div>
+                            
+                            <div class="review-option option-modify" data-decision="modify">
+                                <div class="review-option-icon">
+                                    <i class="fas fa-edit"></i>
+                                </div>
+                                <h6>Modify Diagnosis</h6>
+                                <p class="small text-muted">Adjust or add to the AI diagnosis</p>
+                            </div>
+                            
+                            <div class="review-option option-reject" data-decision="reject">
+                                <div class="review-option-icon">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <h6>Reject & Replace</h6>
+                                <p class="small text-muted">Provide alternative diagnosis</p>
+                            </div>
+                        </div>
+
+                        <input type="hidden" name="review_decision" id="review_decision" required>
+
+                        <!-- Doctor Notes Section -->
+                        <div class="doctor-notes-section">
+                            <label for="doctor_notes" class="form-label">
+                                <strong>Doctor's Notes & Final Diagnosis *</strong>
+                            </label>
+                            <textarea class="form-control notes-textarea" 
+                                      id="doctor_notes" 
+                                      name="doctor_notes" 
+                                      placeholder="Provide your expert medical opinion, final diagnosis, treatment plan, and any additional notes..."
+                                      required></textarea>
+                            <small class="form-text text-muted">
+                                Include your final diagnosis, treatment recommendations, follow-up instructions, and reasoning for your decision.
+                            </small>
+                        </div>
+
+                        <!-- Additional Fields based on Decision -->
+                        <div id="additional-fields" style="display: none;">
+                            <!-- These will be populated dynamically based on selection -->
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="action-buttons">
+                            <a href="{% url 'doctor_dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                            </a>
+                            <button type="button" class="btn btn-outline-info" onclick="saveAsDraft()">
+                                <i class="fas fa-save me-2"></i>Save as Draft
+                            </button>
+                            <button type="submit" class="btn btn-review-submit" id="submit-review" disabled>
+                                <i class="fas fa-clipboard-check me-2"></i>Submit Review
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Case Timeline -->
+            <div class="case-section">
+                <h5><i class="fas fa-history me-2"></i>Case Timeline</h5>
+                <div class="case-timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-icon timeline-created">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                        <div>
+                            <strong>Case Created</strong><br>
+                            <small class="text-muted">{{ case.created_at|date:"M d, Y \a\t H:i" }}</small>
+                        </div>
+                    </div>
+                    
+                    {% if case.ai_diagnosis %}
+                    <div class="timeline-item">
+                        <div class="timeline-icon timeline-ai">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div>
+                            <strong>AI Analysis Completed</strong><br>
+                            <small class="text-muted">{{ case.created_at|date:"M d, Y \a\t H:i" }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-icon timeline-review">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div>
+                            <strong>Doctor Review</strong><br>
+                            <small class="text-muted">In Progress</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nurse Information -->
+            <div class="case-section">
+                <h5><i class="fas fa-user-nurse me-2"></i>Case Created By</h5>
+                <div class="nurse-info-card">
+                    <div class="d-flex align-items-center">
+                        <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #e91e63, #ad1457); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 15px;">
+                            {{ case.nurse.first_name.0 }}{{ case.nurse.last_name.0 }}
+                        </div>
+                        <div>
+                            <strong>{{ case.nurse.get_full_name }}</strong><br>
+                            <small class="text-muted">{{ case.nurse.get_role_display }}</small><br>
+                            <small class="text-muted">{{ case.nurse.userprofile.facility.name|default:"N/A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="case-section">
+                <h5><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-info" onclick="viewPatientHistory()">
+                        <i class="fas fa-history me-2"></i>Patient History
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="consultColleague()">
+                        <i class="fas fa-users me-2"></i>Consult Colleague
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="orderTests()">
+                        <i class="fas fa-vial me-2"></i>Order Additional Tests
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="printCase()">
+                        <i class="fas fa-print me-2"></i>Print Case
+                    </button>
+                </div>
+            </div>
+
+            <!-- AI Performance Feedback -->
+            {% if case.ai_diagnosis_parsed %}
+            <div class="case-section">
+                <h5><i class="fas fa-chart-line me-2"></i>AI Performance</h5>
+                <p class="small text-muted">Help improve our AI by rating this diagnosis:</p>
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-sm btn-outline-danger" onclick="rateAI(1)">Poor</button>
+                    <button class="btn btn-sm btn-outline-warning" onclick="rateAI(2)">Fair</button>
+                    <button class="btn btn-sm btn-outline-info" onclick="rateAI(3)">Good</button>
+                    <button class="btn btn-sm btn-outline-success" onclick="rateAI(4)">Excellent</button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Set confidence bar widths based on data attributes
+    $('.confidence-bar[data-confidence]').each(function() {
+        const confidence = $(this).data('confidence');
+        $(this).css('width', confidence + '%');
+    });
+    
+    // Handle review option selection
+    $('.review-option').click(function() {
+        $('.review-option').removeClass('selected');
+        $(this).addClass('selected');
+        
+        const decision = $(this).data('decision');
+        $('#review_decision').val(decision);
+        
+        updateFormBasedOnDecision(decision);
+        validateForm();
+    });
+    
+    // Validate form on notes change
+    $('#doctor_notes').on('input', validateForm);
+    
+    function updateFormBasedOnDecision(decision) {
+        const additionalFields = $('#additional-fields');
+        additionalFields.empty();
+        
+        switch(decision) {
+            case 'approve':
+                $('#doctor_notes').attr('placeholder', 'Confirm the AI diagnosis and add any additional treatment recommendations or follow-up instructions...');
+                break;
+            case 'modify':
+                $('#doctor_notes').attr('placeholder', 'Explain your modifications to the AI diagnosis, provide the corrected diagnosis, and justify your changes...');
+                additionalFields.html(`
+                    <div class="mt-3">
+                        <label for="modified_diagnosis" class="form-label">Modified Diagnosis</label>
+                        <input type="text" class="form-control" id="modified_diagnosis" name="modified_diagnosis" 
+                               placeholder="Enter the corrected/modified diagnosis">
+                    </div>
+                `);
+                break;
+            case 'reject':
+                $('#doctor_notes').attr('placeholder', 'Provide your alternative diagnosis, explain why you disagree with the AI, and detail your treatment plan...');
+                additionalFields.html(`
+                    <div class="mt-3">
+                        <label for="alternative_diagnosis" class="form-label">Alternative Diagnosis *</label>
+                        <input type="text" class="form-control" id="alternative_diagnosis" name="alternative_diagnosis" 
+                               placeholder="Enter your diagnosis" required>
+                    </div>
+                    <div class="mt-3">
+                        <label for="rejection_reason" class="form-label">Reason for Rejection</label>
+                        <select class="form-select" id="rejection_reason" name="rejection_reason">
+                            <option value="">Select reason (optional)</option>
+                            <option value="insufficient_data">Insufficient patient data</option>
+                            <option value="incorrect_symptoms">Incorrect symptom interpretation</option>
+                            <option value="missed_diagnosis">AI missed obvious diagnosis</option>
+                            <option value="clinical_experience">Clinical experience suggests otherwise</option>
+                            <option value="additional_tests_needed">Additional tests revealed different diagnosis</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                `);
+                break;
+        }
+        
+        additionalFields.show();
+    }
+    
+    function validateForm() {
+        const decision = $('#review_decision').val();
+        const notes = $('#doctor_notes').val().trim();
+        let isValid = decision && notes.length >= 20;
+        
+        // Additional validation based on decision
+        if (decision === 'reject') {
+            const altDiagnosis = $('#alternative_diagnosis').val().trim();
+            isValid = isValid && altDiagnosis.length > 0;
+        }
+        
+        $('#submit-review').prop('disabled', !isValid);
+    }
+    
+    // Form submission
+    $('#review-form').submit(function(e) {
+        e.preventDefault();
+        
+        if (!validateFormSubmission()) {
+            return;
+        }
+        
+        // Show confirmation
+        const decision = $('#review_decision').val();
+        const decisionText = {
+            'approve': 'approve the AI diagnosis',
+            'modify': 'modify the AI diagnosis', 
+            'reject': 'reject the AI diagnosis and provide an alternative'
+        };
+        
+        if (confirm(`Are you sure you want to ${decisionText[decision]}? This action will complete the case review.`)) {
+            // Show loading state
+            $('#submit-review').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Submitting Review...');
+            
+            // Submit form
+            this.submit();
+        }
+    });
+    
+    function validateFormSubmission() {
+        const decision = $('#review_decision').val();
+        const notes = $('#doctor_notes').val().trim();
+        
+        if (!decision) {
+            alert('Please select a review decision (Approve, Modify, or Reject).');
+            return false;
+        }
+        
+        if (notes.length < 20) {
+            alert('Please provide detailed notes (at least 20 characters).');
+            $('#doctor_notes').focus();
+            return false;
+        }
+        
+        if (decision === 'reject') {
+            const altDiagnosis = $('#alternative_diagnosis').val().trim();
+            if (!altDiagnosis) {
+                alert('Please provide an alternative diagnosis when rejecting the AI diagnosis.');
+                $('#alternative_diagnosis').focus();
+                return false;
+            }
+        }
+        
+        return true;
+    }
+});
+
+function saveAsDraft() {
+    // Implementation for saving as draft
+    alert('Draft saved successfully! You can continue reviewing this case later.');
+}
+
+function viewPatientHistory() {
+    // Navigate to patient history
+    window.open(`/patients/{{ case.patient.id }}/`, '_blank');
+}
+
+function consultColleague() {
+    // Implementation for colleague consultation
+    alert('Colleague consultation feature coming soon!');
+}
+
+function orderTests() {
+    // Implementation for ordering tests
+    alert('Test ordering feature coming soon!');
+}
+
+function printCase() {
+    // Print the case
+    window.print();
+}
+
+function rateAI(rating) {
+    $.ajax({
+        url: `/api/cases/{{ case.id }}/rate-ai/`,
+        method: 'POST',
+        data: {
+            'rating': rating,
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            alert('Thank you for your feedback! This helps improve our AI system.');
+        },
+        error: function(xhr) {
+            alert('Error submitting rating: ' + (xhr.responseJSON?.error || 'Unknown error'));
+        }
+    });
+}
+</script>
+{% endblock %}

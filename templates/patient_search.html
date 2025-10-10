@@ -1,0 +1,585 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Patient Search - Medical AI System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        color: white;
+        text-align: center;
+    }
+    
+    .search-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-left: 4px solid #28a745;
+    }
+    
+    .patient-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .patient-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    
+    .patient-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .patient-details {
+        flex-grow: 1;
+    }
+    
+    .patient-actions {
+        flex-shrink: 0;
+        margin-left: 20px;
+    }
+    
+    .patient-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+    
+    .patient-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .patient-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .search-filters {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+    
+    .recent-patients {
+        background: #e8f4f8;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .btn-select {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-select:hover {
+        background: linear-gradient(135deg, #218838, #1fb388);
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .search-stats {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 40px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header Section -->
+    <div class="search-header">
+        <h2><i class="fas fa-search me-3"></i>Patient Search & Selection</h2>
+        <p class="mb-0">Search for existing patients or register a new patient to begin diagnosis</p>
+    </div>
+
+    <div class="row">
+        <!-- Main Search Section -->
+        <div class="col-lg-8">
+            <!-- Search Form -->
+            <div class="search-section">
+                <h4><i class="fas fa-user-search me-2"></i>Find Patient</h4>
+                <form id="patient-search-form" class="mt-3">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="search-query" 
+                                       name="query"
+                                       placeholder="Search by name, patient ID, phone, or email..."
+                                       autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-2"></i>Search
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Advanced Filters -->
+                <div class="search-filters mt-3" id="advanced-filters" style="display: none;">
+                    <h6><i class="fas fa-filter me-2"></i>Advanced Filters</h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">Gender</label>
+                            <select class="form-select" id="filter-gender">
+                                <option value="">All</option>
+                                <option value="M">Male</option>
+                                <option value="F">Female</option>
+                                <option value="O">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Age Range</label>
+                            <select class="form-select" id="filter-age">
+                                <option value="">All Ages</option>
+                                <option value="0-18">0-18 years</option>
+                                <option value="19-35">19-35 years</option>
+                                <option value="36-55">36-55 years</option>
+                                <option value="56+">56+ years</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Insurance Status</label>
+                            <select class="form-select" id="filter-insurance">
+                                <option value="">All</option>
+                                <option value="insured">Insured</option>
+                                <option value="uninsured">Uninsured</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="button" class="btn btn-outline-secondary w-100" id="apply-filters">
+                                <i class="fas fa-filter me-2"></i>Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-2">
+                    <button type="button" class="btn btn-link btn-sm" id="toggle-filters">
+                        <i class="fas fa-chevron-down me-1"></i>Advanced Filters
+                    </button>
+                    <button type="button" class="btn btn-link btn-sm" id="clear-search">
+                        <i class="fas fa-times me-1"></i>Clear Search
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Statistics -->
+            <div class="search-stats" id="search-stats" style="display: none;">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <h5 id="results-count">0</h5>
+                        <small class="text-muted">Results Found</small>
+                    </div>
+                    <div class="col-md-4">
+                        <h5 id="search-time">0ms</h5>
+                        <small class="text-muted">Search Time</small>
+                    </div>
+                    <div class="col-md-4">
+                        <h5 id="total-patients">{{ total_patients|default:0 }}</h5>
+                        <small class="text-muted">Total Patients</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div class="loading-spinner" id="loading-spinner">
+                <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                <p class="mt-2">Searching patients...</p>
+            </div>
+
+            <!-- Search Results -->
+            <div id="search-results">
+                <!-- Results will be loaded here via AJAX -->
+            </div>
+
+            <!-- No Results Message -->
+            <div class="no-results" id="no-results" style="display: none;">
+                <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                <h4>No Patients Found</h4>
+                <p>Try adjusting your search criteria or register a new patient.</p>
+                <a href="{% url 'patients:patient_create' %}" class="btn btn-primary">
+                    <i class="fas fa-user-plus me-2"></i>Register New Patient
+                </a>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'patients:patient_create' %}" class="btn btn-success">
+                            <i class="fas fa-user-plus me-2"></i>Register New Patient
+                        </a>
+                        <a href="{% url 'diagnoses:case_create' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-stethoscope me-2"></i>Start Diagnosis (Skip Search)
+                        </a>
+                        <button class="btn btn-outline-info" id="show-recent-patients">
+                            <i class="fas fa-clock me-2"></i>Recent Patients
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Tips -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="fas fa-lightbulb me-2"></i>Search Tips</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success me-2"></i>Search by full or partial name</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Use patient ID for exact match</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Phone numbers work without formatting</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Email addresses are searchable</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Use filters for specific criteria</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Recent Patients -->
+            <div class="recent-patients" id="recent-patients" style="display: none;">
+                <h5><i class="fas fa-clock me-2"></i>Recent Patients</h5>
+                <div id="recent-patients-list">
+                    <!-- Recent patients will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Patient Selection Modal -->
+<div class="modal fade" id="patientSelectionModal" tabindex="-1" aria-labelledby="patientSelectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="patientSelectionModalLabel">
+                    <i class="fas fa-stethoscope me-2"></i>Start Diagnosis
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <div class="patient-avatar" style="width: 80px; height: 80px; margin: 0 auto;">
+                        <span id="selected-patient-initials"></span>
+                    </div>
+                </div>
+                <h4 class="text-center" id="selected-patient-name"></h4>
+                <div class="row mt-3">
+                    <div class="col-6">
+                        <strong>Patient ID:</strong><br>
+                        <span id="selected-patient-id"></span>
+                    </div>
+                    <div class="col-6">
+                        <strong>Age:</strong><br>
+                        <span id="selected-patient-age"></span>
+                    </div>
+                    <div class="col-6 mt-2">
+                        <strong>Gender:</strong><br>
+                        <span id="selected-patient-gender"></span>
+                    </div>
+                    <div class="col-6 mt-2">
+                        <strong>Phone:</strong><br>
+                        <span id="selected-patient-phone"></span>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <strong>Recent Cases:</strong><br>
+                    <span id="selected-patient-cases" class="text-muted">Loading...</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <a href="#" class="btn btn-primary" id="start-diagnosis-btn">
+                    <i class="fas fa-stethoscope me-2"></i>Start Diagnosis
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let searchTimeout;
+    
+    // Auto-search as user types (with debounce)
+    $('#search-query').on('input', function() {
+        clearTimeout(searchTimeout);
+        const query = $(this).val().trim();
+        
+        if (query.length >= 2) {
+            searchTimeout = setTimeout(() => {
+                performSearch();
+            }, 500);
+        } else if (query.length === 0) {
+            clearSearchResults();
+        }
+    });
+    
+    // Form submission
+    $('#patient-search-form').submit(function(e) {
+        e.preventDefault();
+        performSearch();
+    });
+    
+    // Toggle advanced filters
+    $('#toggle-filters').click(function() {
+        $('#advanced-filters').slideToggle();
+        const icon = $(this).find('i');
+        icon.toggleClass('fa-chevron-down fa-chevron-up');
+    });
+    
+    // Apply filters
+    $('#apply-filters').click(function() {
+        performSearch();
+    });
+    
+    // Clear search
+    $('#clear-search').click(function() {
+        $('#search-query').val('');
+        $('#filter-gender, #filter-age, #filter-insurance').val('');
+        clearSearchResults();
+    });
+    
+    // Show recent patients
+    $('#show-recent-patients').click(function() {
+        loadRecentPatients();
+    });
+    
+    function performSearch() {
+        const query = $('#search-query').val().trim();
+        const gender = $('#filter-gender').val();
+        const age = $('#filter-age').val();
+        const insurance = $('#filter-insurance').val();
+        
+        if (query.length < 2 && !gender && !age && !insurance) {
+            return;
+        }
+        
+        $('#loading-spinner').show();
+        $('#search-results').hide();
+        $('#no-results').hide();
+        
+        const startTime = performance.now();
+        
+        $.ajax({
+            url: "{% url 'patients:patient_search_api' %}",
+            method: 'GET',
+            data: {
+                'query': query,
+                'gender': gender,
+                'age': age,
+                'insurance': insurance
+            },
+            success: function(data) {
+                const endTime = performance.now();
+                const searchTime = Math.round(endTime - startTime);
+                
+                $('#loading-spinner').hide();
+                displaySearchResults(data.patients);
+                updateSearchStats(data.patients.length, searchTime);
+            },
+            error: function(xhr) {
+                $('#loading-spinner').hide();
+                alert('Error searching patients: ' + (xhr.responseJSON?.error || 'Unknown error'));
+            }
+        });
+    }
+    
+    function displaySearchResults(patients) {
+        const resultsContainer = $('#search-results');
+        
+        if (patients.length === 0) {
+            $('#no-results').show();
+            resultsContainer.hide();
+            return;
+        }
+        
+        let html = '';
+        patients.forEach(function(patient) {
+            const initials = getInitials(patient.first_name, patient.last_name);
+            const age = patient.age ? `${patient.age} years old` : 'Age unknown';
+            const recentCases = patient.recent_cases_count || 0;
+            
+            html += `
+                <div class="patient-card">
+                    <div class="patient-info">
+                        <div class="d-flex align-items-center patient-details">
+                            <div class="patient-avatar">${initials}</div>
+                            <div>
+                                <div class="patient-name">${patient.first_name} ${patient.last_name}</div>
+                                <div class="patient-meta">
+                                    ID: ${patient.id} | ${age} | ${patient.gender} | 
+                                    Phone: ${patient.phone_number || 'N/A'} | 
+                                    Cases: ${recentCases}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="patient-actions">
+                            <button class="btn btn-select me-2" onclick="selectPatient(${patient.id})">
+                                <i class="fas fa-stethoscope me-1"></i>Select
+                            </button>
+                            <a href="{% url 'patients:patient_detail' 0 %}".replace('0', patient.id) 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>View
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        resultsContainer.html(html).show();
+    }
+    
+    function updateSearchStats(count, time) {
+        $('#results-count').text(count);
+        $('#search-time').text(time + 'ms');
+        $('#search-stats').show();
+    }
+    
+    function clearSearchResults() {
+        $('#search-results').hide();
+        $('#no-results').hide();
+        $('#search-stats').hide();
+    }
+    
+    function loadRecentPatients() {
+        $.ajax({
+            url: "{% url 'patients:recent_patients_api' %}",
+            method: 'GET',
+            success: function(data) {
+                displayRecentPatients(data.patients);
+                $('#recent-patients').slideDown();
+            },
+            error: function(xhr) {
+                alert('Error loading recent patients: ' + (xhr.responseJSON?.error || 'Unknown error'));
+            }
+        });
+    }
+    
+    function displayRecentPatients(patients) {
+        const container = $('#recent-patients-list');
+        let html = '';
+        
+        patients.forEach(function(patient) {
+            const initials = getInitials(patient.first_name, patient.last_name);
+            html += `
+                <div class="d-flex align-items-center justify-content-between mb-2 p-2 bg-white rounded">
+                    <div class="d-flex align-items-center">
+                        <div class="patient-avatar" style="width: 35px; height: 35px; font-size: 0.8rem;">${initials}</div>
+                        <div class="ms-2">
+                            <small class="fw-bold">${patient.first_name} ${patient.last_name}</small><br>
+                            <small class="text-muted">ID: ${patient.id}</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-select btn-sm" onclick="selectPatient(${patient.id})">
+                        Select
+                    </button>
+                </div>
+            `;
+        });
+        
+        container.html(html);
+    }
+    
+    function getInitials(firstName, lastName) {
+        return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+    }
+    
+    // Load initial recent patients
+    loadRecentPatients();
+});
+
+function selectPatient(patientId) {
+    // Load patient details for confirmation modal
+    $.ajax({
+        url: "{% url 'patients:patient_detail_api' 0 %}".replace('0', patientId),
+        method: 'GET',
+        success: function(patient) {
+            // Populate modal with patient details
+            const initials = (patient.first_name.charAt(0) + patient.last_name.charAt(0)).toUpperCase();
+            $('#selected-patient-initials').text(initials);
+            $('#selected-patient-name').text(`${patient.first_name} ${patient.last_name}`);
+            $('#selected-patient-id').text(patient.id);
+            $('#selected-patient-age').text(patient.age ? `${patient.age} years` : 'Unknown');
+            $('#selected-patient-gender').text(patient.gender);
+            $('#selected-patient-phone').text(patient.phone_number || 'N/A');
+            $('#selected-patient-cases').text(`${patient.recent_cases_count || 0} recent cases`);
+            
+            // Set diagnosis link
+            const diagnosisUrl = "{% url 'diagnoses:case_create' %}" + `?patient=${patientId}`;
+            $('#start-diagnosis-btn').attr('href', diagnosisUrl);
+            
+            // Show modal
+            $('#patientSelectionModal').modal('show');
+        },
+        error: function(xhr) {
+            alert('Error loading patient details: ' + (xhr.responseJSON?.error || 'Unknown error'));
+        }
+    });
+}
+</script>
+{% endblock %}

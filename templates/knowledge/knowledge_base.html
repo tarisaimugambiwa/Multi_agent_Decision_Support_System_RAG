@@ -1,0 +1,311 @@
+{% extends 'base.html' %}
+
+{% block title %}Knowledge Base - Medical AI System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .knowledge-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+    
+    .action-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        height: 100%;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .action-card:hover {
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    }
+    
+    .action-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin-bottom: 20px;
+    }
+    
+    .icon-purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .icon-blue { background: linear-gradient(135deg, #2196F3 0%, #1976d2 100%); color: white; }
+    .icon-green { background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; }
+    .icon-orange { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; }
+    
+    .recent-doc {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+        border-left: 3px solid #667eea;
+        transition: all 0.2s ease;
+    }
+    
+    .recent-doc:hover {
+        background: #f8f9fa;
+        transform: translateX(5px);
+    }
+    
+    .doc-type-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .type-guideline { background: #e3f2fd; color: #1976d2; }
+    .type-protocol { background: #f3e5f5; color: #7b1fa2; }
+    .type-research { background: #e8f5e9; color: #2e7d32; }
+    .type-manual { background: #fff3e0; color: #ef6c00; }
+    .type-other { background: #f5f5f5; color: #616161; }
+    
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .status-active {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-warning {
+        background: #fff3cd;
+        color: #856404;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="knowledge-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-book-medical me-3"></i>
+                    Medical Knowledge Base
+                </h1>
+                <p class="mb-0 opacity-90">
+                    Access 14,000+ medical documents, guidelines, and research papers
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'knowledge:document_upload' %}" class="btn btn-light btn-lg">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>
+                    Upload Document
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_documents }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-file-alt me-2"></i>Total Documents
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ doc_types|length }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-layer-group me-2"></i>Document Types
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">
+                    {% if faiss_exists %}
+                        <i class="fas fa-check-circle text-success"></i>
+                    {% else %}
+                        <i class="fas fa-times-circle text-danger"></i>
+                    {% endif %}
+                </div>
+                <div class="stat-label">
+                    <i class="fas fa-database me-2"></i>Vector Index Status
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">AI</div>
+                <div class="stat-label">
+                    <i class="fas fa-robot me-2"></i>RAG Search Enabled
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <h3 class="mb-3">
+        <i class="fas fa-bolt me-2"></i>Quick Actions
+    </h3>
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <a href="{% url 'knowledge:document_list' %}" class="text-decoration-none">
+                <div class="action-card">
+                    <div class="action-icon icon-purple mx-auto">
+                        <i class="fas fa-list"></i>
+                    </div>
+                    <h5 class="text-center mb-2">Browse Documents</h5>
+                    <p class="text-center text-muted small mb-0">
+                        View all medical documents in the knowledge base
+                    </p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'knowledge:search' %}" class="text-decoration-none">
+                <div class="action-card">
+                    <div class="action-icon icon-blue mx-auto">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h5 class="text-center mb-2">AI Search</h5>
+                    <p class="text-center text-muted small mb-0">
+                        Search using advanced RAG technology
+                    </p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'knowledge:document_upload' %}" class="text-decoration-none">
+                <div class="action-card">
+                    <div class="action-icon icon-green mx-auto">
+                        <i class="fas fa-upload"></i>
+                    </div>
+                    <h5 class="text-center mb-2">Upload New</h5>
+                    <p class="text-center text-muted small mb-0">
+                        Add new documents to the knowledge base
+                    </p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'knowledge:document_list' %}?type=GUIDELINE" class="text-decoration-none">
+                <div class="action-card">
+                    <div class="action-icon icon-orange mx-auto">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <h5 class="text-center mb-2">Guidelines</h5>
+                    <p class="text-center text-muted small mb-0">
+                        Clinical guidelines and protocols
+                    </p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Document Types Breakdown -->
+    {% if doc_types %}
+    <h3 class="mb-3">
+        <i class="fas fa-chart-pie me-2"></i>Document Categories
+    </h3>
+    <div class="row g-3 mb-4">
+        {% for type_name, count in doc_types.items %}
+        <div class="col-md-4">
+            <div class="recent-doc">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-folder me-2 text-primary"></i>
+                        <strong>{{ type_name }}</strong>
+                    </div>
+                    <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Recent Documents -->
+    {% if recent_documents %}
+    <h3 class="mb-3">
+        <i class="fas fa-clock me-2"></i>Recently Added
+    </h3>
+    <div class="bg-white rounded-3 p-3 shadow-sm">
+        {% for doc in recent_documents %}
+        <div class="recent-doc">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">
+                        <a href="{% url 'knowledge:document_detail' doc.pk %}" class="text-decoration-none text-primary">
+                            <i class="fas fa-file-medical me-2"></i>{{ doc.title }}
+                        </a>
+                    </h6>
+                    <div class="text-muted small">
+                        <i class="fas fa-user me-1"></i>{{ doc.author|default:"Unknown" }} • 
+                        <i class="fas fa-calendar me-1"></i>{{ doc.upload_date|date:"M d, Y" }}
+                        {% if doc.source %}
+                        • <i class="fas fa-building me-1"></i>{{ doc.source }}
+                        {% endif %}
+                    </div>
+                </div>
+                <span class="doc-type-badge type-{{ doc.document_type|lower }}">
+                    {{ doc.get_document_type_display }}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <div class="text-center mt-3">
+            <a href="{% url 'knowledge:document_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-right me-2"></i>View All Documents
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        No documents have been uploaded yet. Click "Upload Document" to get started!
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

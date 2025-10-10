@@ -1,0 +1,865 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Doctor Dashboard - Medical AI System{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --doctor-color: #dc3545;
+        --doctor-light: #f8d7da;
+        --doctor-dark: #721c24;
+    }
+    
+    .dashboard-header {
+        background: linear-gradient(135deg, var(--doctor-color) 0%, #c82333 100%);
+        color: white;
+        padding: 30px 0;
+        margin: -30px -30px 30px -30px;
+        border-radius: 0 0 20px 20px;
+    }
+    
+    .dashboard-stats {
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        height: 100%;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .cases-section {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    
+    .section-header {
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 15px;
+        margin-bottom: 25px;
+        display: flex;
+        justify-content: between;
+        align-items: center;
+    }
+    
+    .table-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 20px;
+        border-radius: 10px 10px 0 0;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .cases-table {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        background-color: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+        padding: 15px 12px;
+        vertical-align: middle;
+    }
+    
+    .table td {
+        padding: 15px 12px;
+        vertical-align: middle;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(220, 53, 69, 0.05);
+    }
+    
+    .patient-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .patient-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--doctor-color), #c82333);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        margin-right: 12px;
+        flex-shrink: 0;
+        font-size: 0.9rem;
+    }
+    
+    .patient-details {
+        flex-grow: 1;
+    }
+    
+    .patient-name {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 2px;
+    }
+    
+    .patient-meta {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .symptoms-text {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        line-height: 1.4;
+    }
+    
+    .symptoms-tooltip {
+        cursor: help;
+    }
+    
+    .ai-diagnosis-card {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-radius: 8px;
+        padding: 12px;
+        max-width: 250px;
+    }
+    
+    .ai-primary-diagnosis {
+        font-weight: 600;
+        color: #1976d2;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .ai-confidence {
+        display: flex;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+    
+    .confidence-bar {
+        flex-grow: 1;
+        height: 6px;
+        background-color: #e9ecef;
+        border-radius: 3px;
+        margin-left: 8px;
+        overflow: hidden;
+    }
+    
+    .confidence-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+    
+    .confidence-high { background-color: #28a745; }
+    .confidence-medium { background-color: #ffc107; }
+    .confidence-low { background-color: #dc3545; }
+    
+    .ai-urgency {
+        font-size: 0.8rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-weight: 500;
+    }
+    
+    .urgency-critical {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .urgency-high {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    .urgency-moderate {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .urgency-low {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .nurse-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .nurse-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #e91e63, #ad1457);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        margin-right: 8px;
+        font-size: 0.8rem;
+    }
+    
+    .nurse-name {
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .btn-action {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+        border: none;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .btn-review {
+        background: linear-gradient(135deg, var(--doctor-color), #c82333);
+        color: white;
+    }
+    
+    .btn-review:hover {
+        background: linear-gradient(135deg, #c82333, #a71e2a);
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .btn-view {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .btn-view:hover {
+        background-color: #138496;
+        color: white;
+    }
+    
+    .btn-approve {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .btn-approve:hover {
+        background-color: #218838;
+        color: white;
+    }
+    
+    .priority-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .priority-critical {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .priority-urgent {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    .priority-high {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .priority-medium {
+        background-color: #6c757d;
+        color: white;
+    }
+    
+    .priority-low {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .quick-filters {
+        margin-bottom: 20px;
+    }
+    
+    .filter-btn {
+        margin-right: 10px;
+        margin-bottom: 10px;
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-btn.active {
+        background-color: var(--doctor-color);
+        border-color: var(--doctor-color);
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+    
+    .time-display {
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.8);
+    }
+    
+    @media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.9rem;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .btn-action {
+            margin-bottom: 5px;
+        }
+        
+        .symptoms-text {
+            max-width: 150px;
+        }
+        
+        .ai-diagnosis-card {
+            max-width: 180px;
+        }
+        
+        .patient-info {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .patient-avatar {
+            margin-bottom: 5px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Doctor Dashboard</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-user-md me-3"></i>
+                    Doctor Dashboard
+                </h1>
+                <p class="mb-0 opacity-75">
+                    Welcome back, Dr. {{ user.get_full_name|default:user.username }}! 
+                    Review AI-assisted diagnoses and provide expert medical opinions.
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="mb-2">
+                    <a href="{% url 'knowledge:dashboard' %}" class="btn btn-light me-2">
+                        <i class="fas fa-book-medical me-2"></i>Knowledge Base
+                    </a>
+                    <a href="{% url 'diagnoses:case_create' %}" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>New Case
+                    </a>
+                </div>
+                <div class="time-display">
+                    <i class="fas fa-clock me-2"></i>
+                    <span id="current-time"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="dashboard-stats">
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon text-danger">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div class="stat-number text-danger">{{ pending_reviews_count|default:"0" }}</div>
+                <div class="stat-label">Pending Reviews</div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon text-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-number text-warning">{{ critical_cases_count|default:"0" }}</div>
+                <div class="stat-label">Critical Cases</div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon text-info">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="stat-number text-info">{{ ai_assisted_today|default:"0" }}</div>
+                <div class="stat-label">AI Assisted Today</div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon text-success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-number text-success">{{ reviewed_today|default:"0" }}</div>
+                <div class="stat-label">Reviewed Today</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Case Review Section -->
+<div class="cases-section">
+    <div class="section-header">
+        <h4 class="mb-0">
+            <i class="fas fa-stethoscope me-2"></i>
+            Cases Requiring Review
+        </h4>
+        <div class="d-flex align-items-center">
+            <button class="btn btn-outline-primary btn-sm me-2" onclick="refreshCases()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-sort me-1"></i>Sort
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="sortCases('priority')">Priority</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="sortCases('created')">Date Created</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="sortCases('confidence')">AI Confidence</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="sortCases('patient')">Patient Name</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Filters -->
+    <div class="quick-filters">
+        <button class="btn btn-outline-danger filter-btn active" onclick="filterCases('all')">
+            <i class="fas fa-list me-1"></i>All Cases
+        </button>
+        <button class="btn btn-outline-danger filter-btn" onclick="filterCases('critical')">
+            <i class="fas fa-exclamation-triangle me-1"></i>Critical
+        </button>
+        <button class="btn btn-outline-warning filter-btn" onclick="filterCases('urgent')">
+            <i class="fas fa-clock me-1"></i>Urgent
+        </button>
+        <button class="btn btn-outline-info filter-btn" onclick="filterCases('high-confidence')">
+            <i class="fas fa-robot me-1"></i>High AI Confidence
+        </button>
+        <button class="btn btn-outline-success filter-btn" onclick="filterCases('low-confidence')">
+            <i class="fas fa-question-circle me-1"></i>Low AI Confidence
+        </button>
+    </div>
+
+    <!-- Cases Table -->
+    {% if pending_cases %}
+        <div class="cases-table">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">Patient</th>
+                            <th style="width: 25%;">Symptoms</th>
+                            <th style="width: 25%;">AI Diagnosis</th>
+                            <th style="width: 10%;">Priority</th>
+                            <th style="width: 12%;">Nurse</th>
+                            <th style="width: 8%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for case in pending_cases %}
+                        <tr data-case-id="{{ case.id }}" 
+                            data-priority="{{ case.priority|lower }}"
+                            data-confidence="{{ case.ai_confidence|default:0 }}">
+                            <!-- Patient Info -->
+                            <td>
+                                <div class="patient-info">
+                                    <div class="patient-avatar">
+                                        {{ case.patient.first_name.0 }}{{ case.patient.last_name.0 }}
+                                    </div>
+                                    <div class="patient-details">
+                                        <div class="patient-name">{{ case.patient.full_name }}</div>
+                                        <div class="patient-meta">
+                                            ID: {{ case.patient.id }} | {{ case.patient.age|default:"Unknown" }}y | {{ case.patient.get_gender_display }}
+                                        </div>
+                                        <div class="patient-meta">
+                                            <i class="fas fa-clock me-1"></i>{{ case.created_at|timesince }} ago
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            
+                            <!-- Symptoms -->
+                            <td>
+                                <div class="symptoms-text symptoms-tooltip" 
+                                     data-bs-toggle="tooltip" 
+                                     data-bs-placement="top" 
+                                     title="{{ case.symptoms }}">
+                                    {{ case.symptoms|truncatechars:80 }}
+                                </div>
+                                {% if case.vital_signs %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-heartbeat me-1"></i>Vitals available
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- AI Diagnosis -->
+                            <td>
+                                {% if case.ai_diagnosis %}
+                                    {% with ai_data=case.ai_diagnosis_parsed %}
+                                        <div class="ai-diagnosis-card">
+                                            <div class="ai-primary-diagnosis">
+                                                {% if ai_data.primary_diagnoses %}
+                                                    {{ ai_data.primary_diagnoses.0.condition|default:"Analysis pending" }}
+                                                {% else %}
+                                                    Analysis pending
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div class="ai-confidence">
+                                                <small class="text-muted">Confidence:</small>
+                                                <div class="confidence-bar">
+                                                    {% with confidence=ai_data.diagnostic_confidence|default:0 %}
+                                                        <div class="confidence-fill {% if confidence >= 0.7 %}confidence-high{% elif confidence >= 0.4 %}confidence-medium{% else %}confidence-low{% endif %}"
+                                                             style="width: '{% widthratio confidence 1 100 %}%'"></div>
+                                                    {% endwith %}
+                                                </div>
+                                                <small class="ms-2">{{ ai_data.diagnostic_confidence|floatformat:0|default:0 }}%</small>
+                                            </div>
+                                            
+                                            <div class="mt-2">
+                                                <span class="ai-urgency urgency-{{ ai_data.urgency_level|default:"low" }}">
+                                                    {{ ai_data.urgency_level|default:"Low"|capfirst }} urgency
+                                                </span>
+                                            </div>
+                                        </div>
+                                    {% endwith %}
+                                {% else %}
+                                    <div class="text-muted">
+                                        <i class="fas fa-robot me-2"></i>AI analysis pending
+                                    </div>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Priority -->
+                            <td>
+                                <span class="priority-badge priority-{{ case.priority|lower }}">
+                                    {{ case.get_priority_display }}
+                                </span>
+                            </td>
+                            
+                            <!-- Nurse Info -->
+                            <td>
+                                <div class="nurse-info">
+                                    <div class="nurse-avatar">
+                                        {{ case.nurse.first_name.0 }}{{ case.nurse.last_name.0 }}
+                                    </div>
+                                    <div>
+                                        <div class="nurse-name">{{ case.nurse.get_full_name }}</div>
+                                        <small class="text-muted">{{ case.nurse.userprofile.facility.name|default:"N/A" }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            
+                            <!-- Actions -->
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-action btn-review" 
+                                            onclick="reviewCase('{{ case.id }}')"
+                                            data-bs-toggle="tooltip" 
+                                            title="Review and provide diagnosis">
+                                        <i class="fas fa-clipboard-check me-1"></i>Review
+                                    </button>
+                                    <button class="btn btn-action btn-view" 
+                                            onclick="viewCase('{{ case.id }}')"
+                                            data-bs-toggle="tooltip" 
+                                            title="View full case details">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </button>
+                                    {% if case.ai_diagnosis %}
+                                        <button class="btn btn-action btn-approve" 
+                                                onclick="approveAIDiagnosis('{{ case.id }}')"
+                                                data-bs-toggle="tooltip" 
+                                                title="Approve AI diagnosis">
+                                            <i class="fas fa-check me-1"></i>Approve
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <i class="fas fa-clipboard-check"></i>
+            <h4>No Cases Pending Review</h4>
+            <p>Great work! All cases have been reviewed. New cases will appear here when nurses submit them for your expert opinion.</p>
+            <button class="btn btn-outline-primary" onclick="refreshCases()">
+                <i class="fas fa-sync-alt me-2"></i>Check for New Cases
+            </button>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Quick Actions Panel -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="cases-section">
+            <h5><i class="fas fa-chart-line me-2"></i>AI Performance Today</h5>
+            <div class="row">
+                <div class="col-6">
+                    <div class="text-center">
+                        <h3 class="text-success">{{ ai_accuracy_rate|default:"95" }}%</h3>
+                        <small class="text-muted">AI Accuracy Rate</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="text-center">
+                        <h3 class="text-info">{{ avg_ai_confidence|default:"78" }}%</h3>
+                        <small class="text-muted">Avg Confidence</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="cases-section">
+            <h5><i class="fas fa-clock me-2"></i>Recent Activity</h5>
+            <div class="list-group list-group-flush">
+                {% for activity in recent_activities|slice:":5" %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted">{{ activity.timestamp|timesince }} ago</small><br>
+                                <span class="fw-500">{{ activity.description }}</span>
+                            </div>
+                            <i class="fas fa-{{ activity.icon }} text-{{ activity.color }}"></i>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-history"></i><br>
+                        No recent activity
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Update current time
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        $('#current-time').text(timeString);
+    }
+    
+    setInterval(updateTime, 1000);
+    updateTime();
+    
+    // Auto-refresh cases every 30 seconds
+    setInterval(function() {
+        if (!document.hidden) {
+            refreshCases(true); // Silent refresh
+        }
+    }, 30000);
+});
+
+function refreshCases(silent = false) {
+    if (!silent) {
+        // Show loading indicator
+        $('.cases-table').css('opacity', '0.6');
+    }
+    
+    // Reload the page or make AJAX call
+    window.location.reload();
+}
+
+function filterCases(filter) {
+    // Update active filter button
+    $('.filter-btn').removeClass('active');
+    $(event.target).addClass('active');
+    
+    const rows = $('tbody tr');
+    
+    rows.show(); // Show all rows first
+    
+    switch(filter) {
+        case 'critical':
+            rows.filter(':not([data-priority="critical"])').hide();
+            break;
+        case 'urgent':
+            rows.filter(':not([data-priority="urgent"])').hide();
+            break;
+        case 'high-confidence':
+            rows.filter(function() {
+                return parseFloat($(this).data('confidence')) < 0.7;
+            }).hide();
+            break;
+        case 'low-confidence':
+            rows.filter(function() {
+                return parseFloat($(this).data('confidence')) >= 0.7;
+            }).hide();
+            break;
+        case 'all':
+        default:
+            // Show all rows
+            break;
+    }
+    
+    // Update results count
+    const visibleRows = rows.filter(':visible').length;
+    $('.section-header h4').html(`<i class="fas fa-stethoscope me-2"></i>Cases Requiring Review (${visibleRows})`);
+}
+
+function sortCases(sortBy) {
+    const tbody = $('tbody');
+    const rows = tbody.find('tr').toArray();
+    
+    rows.sort(function(a, b) {
+        const aVal = $(a).data(sortBy) || '';
+        const bVal = $(b).data(sortBy) || '';
+        
+        if (sortBy === 'priority') {
+            const priorityOrder = {'critical': 4, 'urgent': 3, 'high': 2, 'medium': 1, 'low': 0};
+            return priorityOrder[bVal] - priorityOrder[aVal];
+        } else if (sortBy === 'confidence') {
+            return parseFloat(bVal) - parseFloat(aVal);
+        } else {
+            return aVal.toString().localeCompare(bVal.toString());
+        }
+    });
+    
+    tbody.empty().append(rows);
+}
+
+function reviewCase(caseId) {
+    // Navigate to case review page
+    window.location.href = `/diagnoses/${caseId}/review/`;
+}
+
+function viewCase(caseId) {
+    // Navigate to case detail page
+    window.location.href = `/diagnoses/${caseId}/`;
+}
+
+function approveAIDiagnosis(caseId) {
+    if (confirm('Are you sure you want to approve this AI diagnosis? This will mark the case as completed.')) {
+        // Make AJAX call to approve AI diagnosis
+        $.ajax({
+            url: `/api/cases/${caseId}/approve-ai/`,
+            method: 'POST',
+            data: {
+                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                alert('AI diagnosis approved successfully!');
+                refreshCases();
+            },
+            error: function(xhr) {
+                alert('Error approving diagnosis: ' + (xhr.responseJSON?.error || 'Unknown error'));
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

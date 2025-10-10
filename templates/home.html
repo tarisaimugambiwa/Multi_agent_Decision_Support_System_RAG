@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Medical AI System{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item active">Dashboard</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h2">
+            <i class="fas fa-heartbeat text-primary"></i> Medical AI System Dashboard
+        </h1>
+        <p class="lead">AI-powered diagnostic assistance for healthcare professionals</p>
+    </div>
+</div>
+
+<!-- Quick Stats Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_patients|default:"0" }}</h4>
+                        <p class="mb-0">Total Patients</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ active_cases|default:"0" }}</h4>
+                        <p class="mb-0">Active Cases</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-stethoscope fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ pending_reviews|default:"0" }}</h4>
+                        <p class="mb-0">Pending Reviews</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ knowledge_docs|default:"0" }}</h4>
+                        <p class="mb-0">Knowledge Documents</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-book-medical fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="#" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-user-plus"></i><br>
+                            Add New Patient
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="#" class="btn btn-success btn-lg w-100">
+                            <i class="fas fa-plus-circle"></i><br>
+                            Create New Case
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="#" class="btn btn-info btn-lg w-100">
+                            <i class="fas fa-upload"></i><br>
+                            Upload Document
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="/admin/" class="btn btn-secondary btn-lg w-100">
+                            <i class="fas fa-tools"></i><br>
+                            Admin Panel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Recent Cases</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_cases %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Case ID</th>
+                                    <th>Patient</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for case in recent_cases %}
+                                <tr>
+                                    <td>#{{ case.id }}</td>
+                                    <td>{{ case.patient.full_name }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if case.status == 'COMPLETED' %}success{% elif case.status == 'IN_PROGRESS' %}primary{% else %}secondary{% endif %}">
+                                            {{ case.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if case.priority == 'CRITICAL' %}danger{% elif case.priority == 'HIGH' %}warning{% else %}info{% endif %}">
+                                            {{ case.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ case.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No recent cases</h5>
+                        <p class="text-muted">Create your first case to get started</p>
+                        <a href="#" class="btn btn-primary">Create New Case</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Urgent Cases</h5>
+            </div>
+            <div class="card-body">
+                {% if urgent_cases %}
+                    {% for case in urgent_cases %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <strong>#{{ case.id }}</strong><br>
+                            <small class="text-muted">{{ case.patient.full_name }}</small>
+                        </div>
+                        <span class="badge bg-danger">{{ case.get_priority_display }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                        <p class="text-muted mb-0">No urgent cases</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie"></i> System Health</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-success">{{ system_health.database|default:"✓" }}</h4>
+                        <small class="text-muted">Database</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ system_health.ai_service|default:"✓" }}</h4>
+                        <small class="text-muted">AI Service</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .btn-lg {
+        padding: 1rem;
+        text-align: center;
+        line-height: 1.2;
+    }
+    
+    .btn-lg i {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}

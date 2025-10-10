@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+
+{% block title %}Case List - Medical AI System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cases-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .case-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+    }
+    
+    .case-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .case-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 15px;
+    }
+    
+    .case-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .case-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .status-badge {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .status-PENDING { background: #fff3cd; color: #856404; }
+    .status-IN_PROGRESS { background: #cfe2ff; color: #084298; }
+    .status-DOCTOR_REVIEW { background: #e7f3ff; color: #0c5460; }
+    .status-COMPLETED { background: #d4edda; color: #155724; }
+    .status-CANCELLED { background: #f8d7da; color: #721c24; }
+    
+    .priority-badge {
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .priority-LOW { background: #d1ecf1; color: #0c5460; }
+    .priority-MEDIUM { background: #fff3cd; color: #856404; }
+    .priority-HIGH { background: #f8d7da; color: #721c24; }
+    .priority-URGENT { background: #f5c6cb; color: #721c24; }
+    .priority-CRITICAL { background: #dc3545; color: white; }
+    
+    .patient-info {
+        background: #f8f9fa;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    
+    .filter-section {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .no-cases {
+        text-align: center;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .no-cases i {
+        font-size: 5rem;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="cases-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="fas fa-clipboard-list me-2"></i>Diagnostic Cases</h2>
+                <p class="mb-0">View and manage all diagnostic cases</p>
+            </div>
+            <a href="{% url 'diagnoses:case_create' %}" class="btn btn-light btn-lg">
+                <i class="fas fa-plus me-2"></i>New Case
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="DOCTOR_REVIEW">Doctor Review</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Priority</label>
+                <select name="priority" class="form-select">
+                    <option value="">All Priorities</option>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="URGENT">Urgent</option>
+                    <option value="CRITICAL">Critical</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Search</label>
+                <input type="text" name="q" class="form-control" placeholder="Search patient name, symptoms...">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Case Count -->
+    {% if object_list %}
+    <div class="mb-3">
+        <p class="text-muted">
+            <i class="fas fa-info-circle me-2"></i>
+            Showing <strong>{{ object_list|length }}</strong> case(s)
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Case List -->
+    {% if object_list %}
+        {% for case in object_list %}
+        <div class="case-card">
+            <div class="case-header">
+                <div class="flex-grow-1">
+                    <div class="case-title">
+                        <i class="fas fa-file-medical me-2 text-primary"></i>
+                        Case #{{ case.id }} - {{ case.patient.first_name }} {{ case.patient.last_name }}
+                    </div>
+                    <div class="case-meta">
+                        <i class="fas fa-calendar me-1"></i>Created: {{ case.created_at|date:"M d, Y - g:i A" }}
+                        <span class="ms-3">
+                            <i class="fas fa-user-nurse me-1"></i>By: {{ case.nurse.get_full_name }}
+                        </span>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="status-badge status-{{ case.status }}">
+                        {{ case.get_status_display }}
+                    </span>
+                    <div class="mt-2">
+                        <span class="priority-badge priority-{{ case.priority }}">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            {{ case.get_priority_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="patient-info">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong><i class="fas fa-user me-2"></i>Patient:</strong> 
+                        {{ case.patient.first_name }} {{ case.patient.last_name }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong><i class="fas fa-birthday-cake me-2"></i>Age:</strong> 
+                        {{ case.patient.age|default:"Unknown" }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong><i class="fas fa-venus-mars me-2"></i>Gender:</strong> 
+                        {{ case.patient.get_gender_display }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <strong class="text-muted">Symptoms:</strong>
+                <p class="mb-0">{{ case.symptoms|truncatewords:30 }}</p>
+            </div>
+
+            {% if case.vital_signs %}
+            <div class="mb-3">
+                <strong class="text-muted">Vital Signs:</strong>
+                <small class="text-muted d-block">
+                    {% if case.vital_signs.temperature %}
+                        <i class="fas fa-thermometer-half me-1"></i>Temp: {{ case.vital_signs.temperature }}°F
+                    {% endif %}
+                    {% if case.vital_signs.blood_pressure %}
+                        <i class="fas fa-heartbeat ms-3 me-1"></i>BP: {{ case.vital_signs.blood_pressure }}
+                    {% endif %}
+                    {% if case.vital_signs.heart_rate %}
+                        <i class="fas fa-heart ms-3 me-1"></i>HR: {{ case.vital_signs.heart_rate }} BPM
+                    {% endif %}
+                </small>
+            </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'diagnoses:case_detail' case.pk %}" class="btn btn-success">
+                    <i class="fas fa-file-medical me-2"></i>View AI Report
+                </a>
+                {% if case.status == 'PENDING' or case.status == 'DOCTOR_REVIEW' %}
+                    {% if request.user.role == 'DOCTOR' %}
+                    <a href="{% url 'diagnoses:case_review' case.pk %}" class="btn btn-primary">
+                        <i class="fas fa-clipboard-check me-2"></i>Review Case
+                    </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <!-- No Cases Found -->
+        <div class="no-cases">
+            <i class="fas fa-folder-open"></i>
+            <h3 class="text-muted">No Cases Found</h3>
+            <p class="text-muted mb-4">Start by creating your first diagnostic case.</p>
+            <a href="{% url 'diagnoses:case_create' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus me-2"></i>Create First Case
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

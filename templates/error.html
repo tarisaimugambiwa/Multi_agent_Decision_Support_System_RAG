@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ error_code }} Error - Medical AI System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+        <div class="error-page">
+            <h1 class="display-1 text-muted">{{ error_code|default:"404" }}</h1>
+            <h2 class="mb-4">
+                {% if error_code == "404" %}
+                    Page Not Found
+                {% elif error_code == "500" %}
+                    Internal Server Error
+                {% elif error_code == "403" %}
+                    Access Forbidden
+                {% else %}
+                    Error Occurred
+                {% endif %}
+            </h2>
+            
+            <div class="card">
+                <div class="card-body">
+                    <i class="fas fa-exclamation-triangle fa-4x text-warning mb-4"></i>
+                    
+                    <p class="lead">
+                        {% if error_code == "404" %}
+                            The page you're looking for doesn't exist or has been moved.
+                        {% elif error_code == "500" %}
+                            Something went wrong on our end. We're working to fix it.
+                        {% elif error_code == "403" %}
+                            You don't have permission to access this resource.
+                        {% else %}
+                            An unexpected error occurred while processing your request.
+                        {% endif %}
+                    </p>
+                    
+                    <div class="mt-4">
+                        <a href="{% url 'home' %}" class="btn btn-primary me-2">
+                            <i class="fas fa-home"></i> Go Home
+                        </a>
+                        
+                        <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Go Back
+                        </a>
+                        
+                        <a href="/admin/" class="btn btn-outline-info">
+                            <i class="fas fa-tools"></i> Admin Panel
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            {% if error_code == "404" %}
+            <div class="mt-4">
+                <h5>Looking for something specific?</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="#" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="fas fa-users"></i><br>Patients
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="#" class="btn btn-outline-success w-100 mb-2">
+                            <i class="fas fa-stethoscope"></i><br>Diagnoses
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="#" class="btn btn-outline-info w-100 mb-2">
+                            <i class="fas fa-book-medical"></i><br>Knowledge Base
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="#" class="btn btn-outline-warning w-100 mb-2">
+                            <i class="fas fa-hospital"></i><br>Facilities
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .error-page {
+        padding: 2rem 0;
+    }
+    
+    .display-1 {
+        font-size: 8rem;
+        font-weight: 300;
+    }
+    
+    @media (max-width: 768px) {
+        .display-1 {
+            font-size: 4rem;
+        }
+    }
+</style>
+{% endblock %}

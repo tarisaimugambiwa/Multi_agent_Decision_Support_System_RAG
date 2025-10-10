@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient List - Medical AI System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .patients-header {
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #1976d2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .search-box {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .patient-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid var(--secondary-color);
+    }
+    
+    .patient-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .patient-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #1976d2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+    }
+    
+    .patient-name {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 5px;
+    }
+    
+    .patient-info {
+        color: #6c757d;
+        font-size: 0.95rem;
+    }
+    
+    .patient-info i {
+        width: 20px;
+        color: var(--secondary-color);
+    }
+    
+    .btn-view-patient {
+        background: var(--secondary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-view-patient:hover {
+        background: #1976d2;
+        transform: translateY(-2px);
+    }
+    
+    .btn-add-patient {
+        background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        border: none;
+        padding: 12px 30px;
+        font-weight: 600;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-add-patient:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
+    }
+    
+    .no-patients {
+        text-align: center;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .no-patients i {
+        font-size: 5rem;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+    
+    .gender-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .gender-M { background: #e3f2fd; color: #1976d2; }
+    .gender-F { background: #fce4ec; color: #c2185b; }
+    .gender-O { background: #f3e5f5; color: #7b1fa2; }
+    .gender-P { background: #e0e0e0; color: #616161; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="patients-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="fas fa-users me-2"></i>Patient Directory</h2>
+                <p class="mb-0">Browse and manage patient records</p>
+            </div>
+            <a href="{% url 'patients:patient_create' %}" class="btn btn-add-patient btn-success">
+                <i class="fas fa-user-plus me-2"></i>Add New Patient
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Box -->
+    <div class="search-box">
+        <form method="get" action="{% url 'patients:patient_search' %}">
+            <div class="row align-items-end">
+                <div class="col-md-10">
+                    <label class="form-label fw-bold">
+                        <i class="fas fa-search me-2"></i>Search Patients
+                    </label>
+                    <input type="text" 
+                           name="q" 
+                           class="form-control" 
+                           placeholder="Search by name, phone number, or medical record..." 
+                           value="{{ request.GET.q }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Patient Count -->
+    {% if object_list %}
+    <div class="mb-3">
+        <p class="text-muted">
+            <i class="fas fa-info-circle me-2"></i>
+            Showing <strong>{{ object_list|length }}</strong> patient(s)
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Patient List -->
+    {% if object_list %}
+        {% for patient in object_list %}
+        <div class="patient-card">
+            <div class="row align-items-center">
+                <div class="col-md-1 text-center">
+                    <div class="patient-avatar">
+                        {{ patient.first_name.0 }}{{ patient.last_name.0 }}
+                    </div>
+                </div>
+                
+                <div class="col-md-7">
+                    <div class="patient-name">
+                        {{ patient.first_name }} {{ patient.last_name }}
+                        <span class="gender-badge gender-{{ patient.gender }}">
+                            {% if patient.gender == 'M' %}
+                                <i class="fas fa-mars me-1"></i>Male
+                            {% elif patient.gender == 'F' %}
+                                <i class="fas fa-venus me-1"></i>Female
+                            {% elif patient.gender == 'O' %}
+                                <i class="fas fa-genderless me-1"></i>Other
+                            {% else %}
+                                <i class="fas fa-user me-1"></i>Not Specified
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="patient-info">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <i class="fas fa-birthday-cake"></i>
+                                <strong>DOB:</strong> {{ patient.date_of_birth|date:"M d, Y" }}
+                                {% if patient.age %}
+                                    ({{ patient.age }} years)
+                                {% endif %}
+                            </div>
+                            {% if patient.phone_number %}
+                            <div class="col-md-6">
+                                <i class="fas fa-phone"></i>
+                                <strong>Phone:</strong> {{ patient.phone_number }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if patient.address %}
+                        <div class="mt-1">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <strong>Address:</strong> {{ patient.address|truncatewords:10 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-4 text-end">
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            Registered: {{ patient.created_at|date:"M d, Y" }}
+                        </small>
+                    </div>
+                    <a href="{% url 'patients:patient_detail' patient.pk %}" class="btn btn-view-patient">
+                        <i class="fas fa-eye me-2"></i>View Details
+                    </a>
+                    <a href="{% url 'diagnoses:case_create' %}?patient={{ patient.pk }}" class="btn btn-outline-primary ms-2">
+                        <i class="fas fa-file-medical me-2"></i>New Case
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <!-- No Patients Found -->
+        <div class="no-patients">
+            <i class="fas fa-user-slash"></i>
+            <h3 class="text-muted">No Patients Found</h3>
+            <p class="text-muted mb-4">Get started by adding your first patient to the system.</p>
+            <a href="{% url 'patients:patient_create' %}" class="btn btn-add-patient btn-lg">
+                <i class="fas fa-user-plus me-2"></i>Register First Patient
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
