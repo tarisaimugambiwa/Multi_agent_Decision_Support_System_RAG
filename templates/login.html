@@ -1,56 +1,356 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if title %}{{ title }} - {% endif %}Medical AI System{% endblock %}
+{% block title %}Login - Medical AI System{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+    }
+    
+    .login-container {
+        margin-top: -76px; /* Compensate for navbar */
+    }
+    
+    .login-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+    }
+    
+    .login-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 30px;
+        text-align: center;
+        color: white;
+    }
+    
+    .login-header h2 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .login-header p {
+        margin: 10px 0 0 0;
+        opacity: 0.9;
+    }
+    
+    .login-body {
+        padding: 40px;
+    }
+    
+    .form-floating {
+        margin-bottom: 20px;
+    }
+    
+    .form-floating input {
+        border-radius: 10px;
+        border: 2px solid #e0e0e0;
+        padding: 20px 15px;
+        height: 60px;
+    }
+    
+    .form-floating input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .form-floating label {
+        padding: 1rem 15px;
+    }
+    
+    .btn-login {
+        width: 100%;
+        padding: 15px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+    
+    .demo-credentials {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e3e9f0 100%);
+        border-radius: 15px;
+        padding: 25px;
+        margin-top: 30px;
+    }
+    
+    .demo-credentials h6 {
+        color: #667eea;
+        font-weight: 700;
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 1.1rem;
+    }
+    
+    .credential-box {
+        background: white;
+        border-radius: 10px;
+        padding: 15px 20px;
+        margin-bottom: 15px;
+        border-left: 4px solid #667eea;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .credential-box:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+    }
+    
+    .credential-box.nurse {
+        border-left-color: #e91e63;
+    }
+    
+    .credential-box.doctor {
+        border-left-color: #4caf50;
+    }
+    
+    .credential-icon {
+        font-size: 2rem;
+        margin-bottom: 5px;
+    }
+    
+    .credential-title {
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 5px;
+        font-size: 1.1rem;
+    }
+    
+    .credential-info {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+    }
+    
+    .credential-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .credential-label {
+        font-size: 0.75rem;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 3px;
+    }
+    
+    .credential-value {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        color: #2c3e50;
+        font-weight: 600;
+        background: #f8f9fa;
+        padding: 5px 10px;
+        border-radius: 5px;
+    }
+    
+    .security-note {
+        text-align: center;
+        margin-top: 25px;
+        padding: 15px;
+        background: rgba(102, 126, 234, 0.1);
+        border-radius: 10px;
+    }
+    
+    .security-note i {
+        color: #667eea;
+        margin-right: 8px;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header text-center">
-                <h4><i class="fas fa-sign-in-alt"></i> Login to Medical AI System</h4>
-            </div>
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    
-                    {% if form.errors %}
-                        <div class="alert alert-danger">
-                            {{ form.errors }}
-                        </div>
-                    {% endif %}
-                    
+<div class="container login-container">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <div class="login-card">
+                <div class="login-header">
                     <div class="mb-3">
-                        <label for="id_username" class="form-label">Username</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-user"></i></span>
-                            <input type="text" class="form-control" name="username" id="id_username" required>
+                        <i class="fas fa-heartbeat fa-3x"></i>
+                    </div>
+                    <h2>Medical AI System</h2>
+                    <p>Intelligent Healthcare Decision Support</p>
+                </div>
+                
+                <div class="login-body">
+                    <div class="row">
+                        <!-- Login Form Column -->
+                        <div class="col-md-6">
+                            <h5 class="mb-4 text-center fw-bold" style="color: #2c3e50;">Sign In</h5>
+                            
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                            
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    {% for error in form.non_field_errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            
+                            <form method="post" id="loginForm">
+                                {% csrf_token %}
+                                
+                                <div class="form-floating">
+                                    <input 
+                                        type="text" 
+                                        class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
+                                        name="username" 
+                                        id="id_username" 
+                                        placeholder="Username"
+                                        required
+                                        autofocus
+                                    >
+                                    <label for="id_username">
+                                        <i class="fas fa-user me-2"></i>Username
+                                    </label>
+                                </div>
+                                
+                                <div class="form-floating">
+                                    <input 
+                                        type="password" 
+                                        class="form-control {% if form.password.errors %}is-invalid{% endif %}" 
+                                        name="password" 
+                                        id="id_password" 
+                                        placeholder="Password"
+                                        required
+                                    >
+                                    <label for="id_password">
+                                        <i class="fas fa-lock me-2"></i>Password
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                                    <label class="form-check-label" for="remember_me">
+                                        Keep me logged in
+                                    </label>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-login">
+                                    <i class="fas fa-sign-in-alt me-2"></i>
+                                    Sign In
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <!-- Demo Credentials Column -->
+                        <div class="col-md-6">
+                            <div class="demo-credentials">
+                                <h6>
+                                    <i class="fas fa-key me-2"></i>
+                                    Demo Credentials
+                                </h6>
+                                
+                                <!-- Nurse Credentials -->
+                                <div class="credential-box nurse" onclick="fillCredentials('nurse', 'nurse123')">
+                                    <div class="text-center credential-icon">👩‍⚕️</div>
+                                    <div class="credential-title">Nurse Account</div>
+                                    <div class="credential-info">
+                                        <div class="credential-item">
+                                            <span class="credential-label">Username</span>
+                                            <span class="credential-value">nurse</span>
+                                        </div>
+                                        <div class="credential-item">
+                                            <span class="credential-label">Password</span>
+                                            <span class="credential-value">nurse123</span>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2 text-center">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Click to auto-fill
+                                    </small>
+                                </div>
+                                
+                                <!-- Doctor Credentials -->
+                                <div class="credential-box doctor" onclick="fillCredentials('doctor', 'doctor123')">
+                                    <div class="text-center credential-icon">👨‍⚕️</div>
+                                    <div class="credential-title">Doctor Account</div>
+                                    <div class="credential-info">
+                                        <div class="credential-item">
+                                            <span class="credential-label">Username</span>
+                                            <span class="credential-value">doctor</span>
+                                        </div>
+                                        <div class="credential-item">
+                                            <span class="credential-label">Password</span>
+                                            <span class="credential-value">doctor123</span>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2 text-center">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Click to auto-fill
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="security-note">
+                                <small>
+                                    <i class="fas fa-shield-alt"></i>
+                                    <strong>Secure Session:</strong> Role automatically detected
+                                </small>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="id_password" class="form-label">Password</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                            <input type="password" class="form-control" name="password" id="id_password" required>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="remember_me">
-                        <label class="form-check-label" for="remember_me">Remember me</label>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-sign-in-alt"></i> Login
-                    </button>
-                </form>
+                </div>
             </div>
-            <div class="card-footer text-center">
-                <small class="text-muted">
-                    For admin access, use the <a href="/admin/">Django Admin</a>
+            
+            <!-- Footer Info -->
+            <div class="text-center mt-4">
+                <small class="text-white">
+                    <i class="fas fa-lock me-1"></i>
+                    Encrypted connection | 
+                    <a href="/admin/" class="text-white text-decoration-underline">Admin Access</a>
                 </small>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function fillCredentials(username, password) {
+    document.getElementById('id_username').value = username;
+    document.getElementById('id_password').value = password;
+    
+    // Add visual feedback
+    const usernameInput = document.getElementById('id_username');
+    const passwordInput = document.getElementById('id_password');
+    
+    usernameInput.classList.add('border-success');
+    passwordInput.classList.add('border-success');
+    
+    setTimeout(() => {
+        usernameInput.classList.remove('border-success');
+        passwordInput.classList.remove('border-success');
+    }, 1000);
+    
+    // Focus on submit button
+    document.querySelector('.btn-login').focus();
+}
+</script>
 {% endblock %}

@@ -32,7 +32,17 @@ from knowledge.models import KnowledgeDocument
 
 
 def home_view(request):
-    """Enhanced dashboard view for the Medical AI System with real data."""
+    """
+    Enhanced dashboard view for the Medical AI System with real data.
+    
+    Important: This view redirects unauthenticated users to the app login page,
+    NOT the Django admin login. This ensures users see the custom purple gradient
+    login page with demo credentials.
+    """
+    
+    # Redirect unauthenticated users to login page
+    if not request.user.is_authenticated:
+        return redirect('login')  # Goes to /accounts/login/ (app login)
     
     # Base statistics available to all users
     total_patients = Patient.objects.count()
@@ -116,27 +126,39 @@ from django.contrib.auth.views import LoginView as BaseLoginView
 from django.contrib import messages
 
 class RoleBasedLoginView(BaseLoginView):
-    """Custom login view that redirects based on user role and validates role selection"""
+    """Custom login view with automatic role detection and session management"""
     template_name = 'registration/login.html'
     
     def form_valid(self, form):
-        """Validate that the user has the selected role"""
-        # Get the selected role from the form
-        selected_role = self.request.POST.get('role', '').upper()
+        """
+        Automatically detect user role and set up session.
+        No dropdown selection needed - role is determined by username/password.
+        """
         user = form.get_user()
         
-        # Check if user's role matches the selected role
-        if selected_role and user.role != selected_role:
-            # Add error message
-            messages.error(
-                self.request,
-                f"Invalid credentials. Your account is not registered as a {selected_role.title()}. "
-                f"Please select the correct role or contact your administrator."
-            )
-            return self.form_invalid(form)
+        # Call parent form_valid to log the user in
+        response = super().form_valid(form)
         
-        # If role matches or no role selected, proceed with login
-        return super().form_valid(form)
+        # Set up session with role information
+        self.request.session['user_role'] = user.role
+        self.request.session['user_fullname'] = user.get_full_name() or user.username
+        self.request.session['is_nurse'] = user.role == 'NURSE'
+        self.request.session['is_doctor'] = user.role == 'DOCTOR'
+        self.request.session['is_expert'] = user.role == 'EXPERT'
+        
+        # Add success message with role-specific greeting
+        role_greetings = {
+            'NURSE': '👩‍⚕️ Welcome back, Nurse',
+            'DOCTOR': '👨‍⚕️ Welcome back, Dr.',
+            'EXPERT': '🔬 Welcome back, Expert'
+        }
+        greeting = role_greetings.get(user.role, 'Welcome back')
+        messages.success(
+            self.request,
+            f"{greeting} {user.get_full_name() or user.username}! Your session is active."
+        )
+        
+        return response
     
     def get_success_url(self):
         """Redirect to role-specific dashboard after successful login"""
@@ -145,21 +167,20 @@ class RoleBasedLoginView(BaseLoginView):
             return '/nurse-dashboard/'
         elif user.role == 'DOCTOR':
             return '/doctor-dashboard/'
-        elif user.role == 'EXPERT':
-            return '/expert-dashboard/'
         else:
-            return '/'
+            return '/'  # Expert and other roles go to home
 
 
 urlpatterns = [
-    # Home page
+    # Home page - redirects to app login if not authenticated
     path("", home_view, name="home"),
     
-    # Authentication URLs
+    # Authentication URLs - Main app login (NOT admin login)
     path("accounts/", include([
         path("login/", RoleBasedLoginView.as_view(), name="login"),
+        # Logout redirects to app login page (purple gradient with demo credentials)
         path("logout/", auth_views.LogoutView.as_view(
-            next_page="/accounts/login/",
+            next_page="/accounts/login/",  # App login, NOT /system-admin/
             http_method_names=['get', 'post']
         ), name="logout"),
         path("password_change/", auth_views.PasswordChangeView.as_view(
@@ -216,6 +237,9 @@ urlpatterns = [
         # Add more API endpoints here as needed
     ])),
     
-    # Admin interface
-    path("admin/", admin.site.urls),
+    # Django Admin interface - Separate from app login
+    # Use /system-admin/ for admin access (more secure than /admin/)
+    # Admin login is SEPARATE - uses Django's default admin login
+    # App users (nurse/doctor) should use /accounts/login/ NOT /system-admin/
+    path("system-admin/", admin.site.urls),
 ]

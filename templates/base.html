@@ -276,16 +276,16 @@
                                 <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
                                 <li><a class="dropdown-item" href="#"><i class="fas fa-history me-2"></i>My Cases</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                {% if user.is_staff %}
-                                    <li><a class="dropdown-item" href="/admin/"><i class="fas fa-tools me-2"></i>Admin Panel</a></li>
+                                {% if user.is_superuser %}
+                                    <li><a class="dropdown-item" href="/system-admin/"><i class="fas fa-cog me-2"></i>System Admin</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                 {% endif %}
-                                <li><a class="dropdown-item text-danger" href="/accounts/logout/"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                                <li><a class="dropdown-item text-danger" href="/accounts/login/"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                             </ul>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="btn btn-primary" href="/admin/">
+                            <a class="btn btn-primary" href="/accounts/login/">
                                 <i class="fas fa-sign-in-alt me-1"></i> Login
                             </a>
                         </li>
@@ -302,138 +302,160 @@
             <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
                 <div class="position-sticky">
                     <ul class="nav flex-column">
-                        <!-- Dashboard - Available to all -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'home' %}">
-                                <i class="fas fa-tachometer-alt"></i>
-                                <span>Dashboard</span>
-                            </a>
-                        </li>
-                        
-                        <!-- Role-specific dashboards -->
+                        <!-- NURSE-SPECIFIC NAVIGATION -->
                         {% if user.role == 'NURSE' %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'nurse_dashboard' %}">
-                                <i class="fas fa-user-nurse"></i>
-                                <span>Nurse Dashboard</span>
-                            </a>
-                        </li>
+                            <!-- Nurse Dashboard -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'nurse_dashboard' %}active{% endif %}" href="{% url 'nurse_dashboard' %}">
+                                    <i class="fas fa-user-nurse"></i>
+                                    <span>Nurse Dashboard</span>
+                                </a>
+                            </li>
+                            
+                            <!-- Patient Care Section -->
+                            <div class="nav-section">Patient Care</div>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'patient' in request.path %}active{% endif %}" href="{% url 'patients:patient_list' %}">
+                                    <i class="fas fa-users"></i>
+                                    <span>Patients</span>
+                                </a>
+                            </li>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'case/new' in request.path %}active{% endif %}" href="{% url 'diagnoses:case_create' %}">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span>New Case</span>
+                                </a>
+                            </li>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'case' in request.path and 'new' not in request.path %}active{% endif %}" href="{% url 'diagnoses:case_list' %}">
+                                    <i class="fas fa-stethoscope"></i>
+                                    <span>Diagnostic Cases</span>
+                                </a>
+                            </li>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'medical-record' in request.path %}active{% endif %}" href="#">
+                                    <i class="fas fa-file-medical"></i>
+                                    <span>Medical Records</span>
+                                </a>
+                            </li>
+                        
+                        <!-- DOCTOR-SPECIFIC NAVIGATION -->
                         {% elif user.role == 'DOCTOR' %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'doctor_dashboard' %}">
-                                <i class="fas fa-user-md"></i>
-                                <span>Doctor Dashboard</span>
-                            </a>
-                        </li>
-                        {% endif %}
+                            <!-- Doctor Dashboard -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'doctor_dashboard' %}active{% endif %}" href="{% url 'doctor_dashboard' %}">
+                                    <i class="fas fa-user-md"></i>
+                                    <span>Doctor Dashboard</span>
+                                </a>
+                            </li>
+                            
+                            <!-- Patient Care Section -->
+                            <div class="nav-section">Patient Management</div>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'patient' in request.path %}active{% endif %}" href="{% url 'patients:patient_list' %}">
+                                    <i class="fas fa-users"></i>
+                                    <span>Patients</span>
+                                </a>
+                            </li>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'medical-record' in request.path %}active{% endif %}" href="#">
+                                    <i class="fas fa-file-medical"></i>
+                                    <span>Medical Records</span>
+                                </a>
+                            </li>
+                            
+                            <!-- Knowledge Base Section -->
+                            <div class="nav-section">Resources</div>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'knowledge' in request.path %}active{% endif %}" href="{% url 'knowledge:dashboard' %}">
+                                    <i class="fas fa-book-medical"></i>
+                                    <span>Knowledge Base</span>
+                                </a>
+                            </li>
                         
-                        <!-- Patient Management Section -->
-                        <div class="nav-section">Patient Care</div>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-users"></i>
-                                <span>Patients</span>
-                            </a>
-                        </li>
-                        
-                        {% if user.role == 'NURSE' or user.role == 'DOCTOR' %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-plus-circle"></i>
-                                <span>New Case</span>
-                            </a>
-                        </li>
-                        {% endif %}
-                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-stethoscope"></i>
-                                <span>Diagnostic Cases</span>
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-file-medical"></i>
-                                <span>Medical Records</span>
-                            </a>
-                        </li>
-                        
-                        <!-- Doctor-specific features -->
-                        {% if user.role == 'DOCTOR' %}
-                        <div class="nav-section">Doctor Tools</div>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-clipboard-check"></i>
-                                <span>Pending Reviews</span>
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-prescription-bottle-alt"></i>
-                                <span>Prescriptions</span>
-                            </a>
-                        </li>
-                        {% endif %}
-                        
-                        <!-- Knowledge & Resources -->
-                        <div class="nav-section">Resources</div>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-book-medical"></i>
-                                <span>Knowledge Base</span>
-                            </a>
-                        </li>
-                        
-                        {% if user.role == 'EXPERT' or user.role == 'DOCTOR' %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-upload"></i>
-                                <span>Upload Document</span>
-                            </a>
-                        </li>
-                        {% endif %}
-                        
-                        <!-- Management Section (Admin/Expert only) -->
-                        {% if user.role == 'EXPERT' or user.is_staff %}
-                        <div class="nav-section">Management</div>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-hospital"></i>
-                                <span>Facilities</span>
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-user-md"></i>
-                                <span>Staff Management</span>
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-chart-bar"></i>
-                                <span>Analytics</span>
-                            </a>
-                        </li>
-                        {% endif %}
-                        
-                        <!-- Admin Panel (Staff only) -->
-                        {% if user.is_staff %}
-                        <div class="nav-section">System</div>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link" href="/admin/">
-                                <i class="fas fa-tools"></i>
-                                <span>Admin Panel</span>
-                            </a>
-                        </li>
+                        <!-- EXPERT/ADMIN NAVIGATION (Full Access) -->
+                        {% else %}
+                            <!-- Dashboard -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                    <span>Dashboard</span>
+                                </a>
+                            </li>
+                            
+                            <!-- Patient Management Section -->
+                            <div class="nav-section">Patient Care</div>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'patient' in request.path %}active{% endif %}" href="{% url 'patients:patient_list' %}">
+                                    <i class="fas fa-users"></i>
+                                    <span>Patients</span>
+                                </a>
+                            </li>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'case/new' in request.path %}active{% endif %}" href="{% url 'diagnoses:case_create' %}">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span>New Case</span>
+                                </a>
+                            </li>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'case' in request.path and 'new' not in request.path %}active{% endif %}" href="{% url 'diagnoses:case_list' %}">
+                                    <i class="fas fa-stethoscope"></i>
+                                    <span>Diagnostic Cases</span>
+                                </a>
+                            </li>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'medical-record' in request.path %}active{% endif %}" href="#">
+                                    <i class="fas fa-file-medical"></i>
+                                    <span>Medical Records</span>
+                                </a>
+                            </li>
+                            
+                            <!-- Knowledge & Resources -->
+                            <div class="nav-section">Resources</div>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'knowledge' in request.path %}active{% endif %}" href="{% url 'knowledge:dashboard' %}">
+                                    <i class="fas fa-book-medical"></i>
+                                    <span>Knowledge Base</span>
+                                </a>
+                            </li>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'knowledge:document_upload' %}">
+                                    <i class="fas fa-upload"></i>
+                                    <span>Upload Document</span>
+                                </a>
+                            </li>
+                            
+                            <!-- Management Section -->
+                            <div class="nav-section">Management</div>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">
+                                    <i class="fas fa-chart-bar"></i>
+                                    <span>Analytics</span>
+                                </a>
+                            </li>
+                            
+                            {% if user.is_superuser %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="/system-admin/">
+                                    <i class="fas fa-cog"></i>
+                                    <span>System Admin</span>
+                                </a>
+                            </li>
+                            {% endif %}
                         {% endif %}
                     </ul>
                 </div>
