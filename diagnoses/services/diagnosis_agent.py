@@ -253,30 +253,50 @@ class DiagnosisAgent:
                 enhanced_context += f"\n\nBased on {len(retriever_context['results'])} medical guidelines, "
                 enhanced_context += f"from sources: {', '.join(retriever_context.get('sources', [])[:3])}"
             
-            # Call LLM with enhanced context including RAG results
-            ai_result = self.ai_model(symptoms, enhanced_context)
+            # Build patient history dict for AI model
+            patient_history_dict = {
+                'medical_history': enhanced_context,
+                'age': 'unknown',
+                'gender': 'unknown'
+            }
             
-            # Parse the result
+            # Call AI diagnosis engine with enhanced context
+            ai_result = self.ai_model(symptoms, patient_history_dict)
+            
+            # Parse the result from diagnostic engine
             if isinstance(ai_result, dict):
-                # Add RAG metadata
-                ai_result['rag_sources'] = retriever_context.get('sources', []) if retriever_context else []
-                ai_result['knowledge_base_used'] = retriever_context.get('knowledge_base_used', False) if retriever_context else False
-                return ai_result
-            elif isinstance(ai_result, str):
-                # Try to parse as JSON
-                try:
-                    parsed_result = json.loads(ai_result)
-                    parsed_result['rag_sources'] = retriever_context.get('sources', []) if retriever_context else []
-                    parsed_result['knowledge_base_used'] = retriever_context.get('knowledge_base_used', False) if retriever_context else False
-                    return parsed_result
-                except:
-                    return {
-                        'diagnosis': ai_result,
-                        'reasoning': 'AI generated diagnosis based on medical literature',
-                        'confidence': 0.7,
-                        'rag_sources': retriever_context.get('sources', []) if retriever_context else [],
-                        'knowledge_base_used': retriever_context.get('knowledge_base_used', False) if retriever_context else False
-                    }
+                # Extract primary diagnosis from diagnostic engine results
+                primary_diagnoses = ai_result.get('primary_diagnoses', [])
+                
+                if primary_diagnoses and len(primary_diagnoses) > 0:
+                    top_diagnosis = primary_diagnoses[0]
+                    diagnosis_name = top_diagnosis.get('condition', 'Unknown condition')
+                    diagnosis_confidence = top_diagnosis.get('confidence', 0.5)
+                    
+                    # Get treatment recommendations
+                    treatment_recs = ai_result.get('treatment_recommendations', [])
+                    reasoning = f"Based on symptom analysis and medical guidelines. "
+                    if treatment_recs:
+                        reasoning += f"Treatment guidelines available. "
+                    
+                    # Add knowledge base sources
+                    reasoning += f"Analysis used {ai_result.get('knowledge_sources', 0)} medical references."
+                else:
+                    # Fallback if no diagnoses matched
+                    diagnosis_name = 'Unable to determine specific diagnosis'
+                    diagnosis_confidence = 0.3
+                    reasoning = 'Symptoms do not match clear diagnostic patterns. Further evaluation recommended.'
+                
+                return {
+                    'diagnosis': diagnosis_name,
+                    'confidence': diagnosis_confidence,
+                    'reasoning': reasoning,
+                    'urgency_level': ai_result.get('urgency_level', 'moderate'),
+                    'severity_score': ai_result.get('severity_score', 0.5),
+                    'rag_sources': retriever_context.get('sources', []) if retriever_context else [],
+                    'knowledge_base_used': retriever_context.get('knowledge_base_used', False) if retriever_context else False,
+                    'ai_raw_response': ai_result
+                }
             else:
                 return {
                     'diagnosis': str(ai_result),

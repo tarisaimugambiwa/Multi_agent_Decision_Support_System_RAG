@@ -138,3 +138,11 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 SESSION_COOKIE_AGE = 86400  # 24 hours
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# AI/LLM Settings
+# Ollama Configuration (Local LLM)
+OLLAMA_API_URL = 'http://localhost:11434/api/generate'
+OLLAMA_MODEL = 'llama3.2'  # Options: llama3.2, llama3.1, mistral, meditron, etc.
+
+# HuggingFace API (Optional fallback)
+HUGGINGFACE_API_KEY = None  # Set to your API key if using HuggingFace

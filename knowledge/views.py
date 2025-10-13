@@ -176,6 +176,30 @@ def document_upload(request):
 
 
 @login_required
+def document_delete(request, pk):
+    """Delete a knowledge document - Doctor only"""
+    if not check_doctor_access(request.user):
+        messages.error(request, 'Access denied. Knowledge Base is only available to doctors.')
+        return redirect('home')
+    
+    document = get_object_or_404(KnowledgeDocument, pk=pk)
+    
+    if request.method == 'POST':
+        title = document.title
+        try:
+            document.delete()
+            messages.success(request, f'Document "{title}" has been successfully deleted.')
+            messages.warning(request, 'Note: You may need to rebuild the FAISS index to remove this document from search results.')
+            return redirect('knowledge:document_list')
+        except Exception as e:
+            messages.error(request, f'Error deleting document: {str(e)}')
+            return redirect('knowledge:document_detail', pk=pk)
+    
+    # If GET request, redirect to detail page (delete should only be POST)
+    return redirect('knowledge:document_detail', pk=pk)
+
+
+@login_required
 def search_knowledge(request):
     """Search knowledge base using RAG - Doctor only"""
     if not check_doctor_access(request.user):

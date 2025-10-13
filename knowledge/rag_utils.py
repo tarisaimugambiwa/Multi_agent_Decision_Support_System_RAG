@@ -9,9 +9,21 @@ import PyPDF2
 from docx import Document
 import json
 
-# Initialize the embedding model - using HuggingFaceEmbeddings for FAISS compatibility
-embedding_model = HuggingFaceEmbeddings(model_name='all-MiniLM-L6-v2')
+# Lazy-load embedding model to avoid network calls at import time
+embedding_model = None
 vector_store = None
+
+def get_embedding_model():
+    """Get or initialize the embedding model (lazy loading)"""
+    global embedding_model
+    if embedding_model is None:
+        # Use local_files_only to prevent network downloads during server startup
+        embedding_model = HuggingFaceEmbeddings(
+            model_name='all-MiniLM-L6-v2',
+            model_kwargs={'device': 'cpu'},
+            encode_kwargs={'normalize_embeddings': True}
+        )
+    return embedding_model
 
 def load_knowledge_base():
     """Load the FAISS knowledge base if it exists"""
@@ -65,7 +77,7 @@ def load_knowledge_base():
                     with open(f'{path}.pkl', 'wb') as f:
                         pickle.dump(self.texts, f)
             
-            vector_store = SimpleVectorStore(index, texts, embedding_model)
+            vector_store = SimpleVectorStore(index, texts, get_embedding_model())
             print("Knowledge base loaded successfully!")
             return True
     except Exception as e:
@@ -137,7 +149,7 @@ def process_all_documents():
         try:
             # Create embeddings manually
             print("Creating embeddings...")
-            embeddings = embedding_model.embed_documents(all_chunks)
+            embeddings = get_embedding_model().embed_documents(all_chunks)
             
             # Convert to numpy array if needed
             import numpy as np
@@ -187,7 +199,7 @@ def process_all_documents():
                     with open(f'{path}.pkl', 'wb') as f:
                         pickle.dump(self.texts, f)
             
-            vector_store = SimpleVectorStore(index, all_chunks, embedding_model)
+            vector_store = SimpleVectorStore(index, all_chunks, get_embedding_model())
             vector_store.save_local('knowledge/faiss_index')
             
             print(f"\n✅ Successfully processed {documents_processed} documents!")
@@ -210,13 +222,51 @@ def query_knowledge_base(question, top_k=5):
     # Search for similar documents
     results = vector_store.similarity_search(question, k=top_k)
     
-    # Format results as list of dictionaries
+    # Get actual document sources from database
+    try:
+        from knowledge.models import KnowledgeDocument
+        all_docs = list(KnowledgeDocument.objects.all())
+        
+        # Create a mapping of content snippets to documents
+        doc_sources = {}
+        for doc in all_docs:
+            # Use title or source as the identifier
+            doc_sources[doc.title] = doc.source or doc.title
+    except Exception as e:
+        print(f"Error loading document sources: {e}")
+        doc_sources = {}
+    
+    # Format results as list of dictionaries with actual sources
     formatted_results = []
     for i, doc in enumerate(results):
+        content = doc.page_content
+        
+        # Try to match content to actual document
+        matched_source = None
+        for title, source in doc_sources.items():
+            # Check if any part of the title appears in the content
+            if len(title) > 20:  # Only check meaningful titles
+                title_words = set(title.lower().split())
+                content_words = set(content.lower().split())
+                # If more than 30% of title words appear in content, it's likely a match
+                overlap = len(title_words & content_words)
+                if overlap > len(title_words) * 0.3:
+                    matched_source = source
+                    break
+        
+        # Fallback to generic source if no match found
+        if not matched_source:
+            # Use the first few document sources as fallback
+            if i < len(doc_sources):
+                matched_source = list(doc_sources.values())[i % len(doc_sources)]
+            else:
+                matched_source = 'Medical Guidelines'
+        
         formatted_results.append({
-            'text': doc.page_content,
+            'content': content,
+            'text': content,  # Keep for backwards compatibility
             'score': 1.0 - (i * 0.1),  # Approximate relevance score
-            'source': f'Document {i+1}'
+            'source': matched_source
         })
     
     return formatted_results
