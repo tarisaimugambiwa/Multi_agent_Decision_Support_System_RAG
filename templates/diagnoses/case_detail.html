@@ -287,16 +287,24 @@
                     <i class="fas fa-brain"></i>AI-Powered Diagnosis
                 </h3>
                 
-                <!-- Primary Diagnosis -->
+                <!-- Primary Diagnosis with Explanation -->
                 <div class="diagnosis-card">
                     <div class="primary-diagnosis">
                         {{ ai_diagnosis_data.diagnosis.primary_diagnosis }}
                     </div>
-                    <div>
-                        <strong>Confidence Level:</strong>
+                    
+                    {% if ai_diagnosis_data.diagnosis.explanation %}
+                    <div class="mt-3">
+                        <strong><i class="fas fa-info-circle me-2"></i>What This Means:</strong>
+                        <p class="text-muted">{{ ai_diagnosis_data.diagnosis.explanation }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <strong>AI Confidence Level:</strong>
                         <div class="confidence-bar">
-                            <div class="confidence-fill" data-confidence="{{ ai_diagnosis_data.diagnosis.confidence }}">
-                                {{ ai_diagnosis_data.diagnosis.confidence }}% Confidence
+                            <div class="confidence-fill" data-confidence="{{ ai_diagnosis_data.diagnosis.confidence|floatformat:0 }}">
+                                {% widthratio ai_diagnosis_data.diagnosis.confidence 1 100 %}% Confidence
                             </div>
                         </div>
                     </div>
@@ -306,21 +314,22 @@
                 {% if ai_diagnosis_data.diagnosis.emergency_conditions %}
                 <div class="mt-3">
                     <h5 class="text-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Emergency Conditions Detected
+                        <i class="fas fa-exclamation-triangle me-2"></i>⚠️ Emergency Alert
                     </h5>
                     {% for condition in ai_diagnosis_data.diagnosis.emergency_conditions %}
                     <div class="emergency-condition">
                         <i class="fas fa-bolt me-2"></i>{{ condition }}
                     </div>
                     {% endfor %}
+                    <p class="text-danger mt-2"><strong>Action Required:</strong> Immediate medical attention needed!</p>
                 </div>
                 {% endif %}
 
                 <!-- Red Flags -->
                 {% if ai_diagnosis_data.diagnosis.red_flags %}
                 <div class="mt-3">
-                    <h5 class="text-danger">
-                        <i class="fas fa-flag me-2"></i>Clinical Red Flags
+                    <h5 class="text-warning">
+                        <i class="fas fa-flag me-2"></i>Important Warning Signs
                     </h5>
                     {% for flag in ai_diagnosis_data.diagnosis.red_flags %}
                     <div class="red-flag">
@@ -330,24 +339,8 @@
                 </div>
                 {% endif %}
 
-                <!-- Differential Diagnoses -->
-                {% if ai_diagnosis_data.diagnosis.differential_diagnoses %}
-                <div class="mt-4">
-                    <h5><i class="fas fa-list-ul me-2"></i>Differential Diagnoses</h5>
-                    {% for diff in ai_diagnosis_data.diagnosis.differential_diagnoses %}
-                    <div class="differential-item">
-                        <div class="d-flex justify-content-between">
-                            <strong>{{ forloop.counter }}. {{ diff.diagnosis }}</strong>
-                            <span class="badge bg-primary">{{ diff.confidence }}% probability</span>
-                        </div>
-                        <p class="text-muted mb-0 mt-2">{{ diff.reasoning }}</p>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                <!-- Recommended Tests -->
-                {% if ai_diagnosis_data.diagnosis.recommended_tests %}
+                <!-- Recommended Tests - Only for Doctors -->
+                {% if ai_diagnosis_data.diagnosis.recommended_tests and user.role == 'DOCTOR' %}
                 <div class="mt-4">
                     <h5><i class="fas fa-vial me-2"></i>Recommended Diagnostic Tests</h5>
                     {% for test in ai_diagnosis_data.diagnosis.recommended_tests %}
@@ -357,7 +350,6 @@
                 {% endif %}
             </div>
             {% endif %}
-
             <!-- Treatment Plan -->
             {% if ai_diagnosis_data.treatment %}
             <div class="report-section">
@@ -366,11 +358,11 @@
                 </h3>
 
                 <!-- Action Plan Timeline -->
-                {% if ai_diagnosis_data.treatment.action_plan %}
+                {% if ai_diagnosis_data.treatment.immediate_actions or ai_diagnosis_data.treatment.short_term_actions or ai_diagnosis_data.treatment.follow_up_actions %}
                 <div class="action-timeline">
-                    {% if ai_diagnosis_data.treatment.action_plan.immediate %}
+                    {% if ai_diagnosis_data.treatment.immediate_actions %}
                     <h5>Immediate Actions (0-15 minutes)</h5>
-                    {% for action in ai_diagnosis_data.treatment.action_plan.immediate %}
+                    {% for action in ai_diagnosis_data.treatment.immediate_actions %}
                     <div class="action-item">
                         <i class="fas fa-bolt text-danger me-2"></i>
                         <strong>{{ action }}</strong>
@@ -378,9 +370,9 @@
                     {% endfor %}
                     {% endif %}
 
-                    {% if ai_diagnosis_data.treatment.action_plan.short_term %}
+                    {% if ai_diagnosis_data.treatment.short_term_actions %}
                     <h5 class="mt-3">Short-term Actions (Within 1-4 hours)</h5>
-                    {% for action in ai_diagnosis_data.treatment.action_plan.short_term %}
+                    {% for action in ai_diagnosis_data.treatment.short_term_actions %}
                     <div class="action-item">
                         <i class="fas fa-clock text-warning me-2"></i>
                         {{ action }}
@@ -388,9 +380,9 @@
                     {% endfor %}
                     {% endif %}
 
-                    {% if ai_diagnosis_data.treatment.action_plan.follow_up %}
+                    {% if ai_diagnosis_data.treatment.follow_up_actions %}
                     <h5 class="mt-3">Follow-up Actions</h5>
-                    {% for action in ai_diagnosis_data.treatment.action_plan.follow_up %}
+                    {% for action in ai_diagnosis_data.treatment.follow_up_actions %}
                     <div class="action-item">
                         <i class="fas fa-calendar-check text-success me-2"></i>
                         {{ action }}
@@ -401,10 +393,13 @@
                 {% endif %}
 
                 <!-- Medications -->
-                {% if ai_diagnosis_data.treatment.medications %}
+                {% if ai_diagnosis_data.treatment.medications.primary_medications or ai_diagnosis_data.treatment.medications.alternative_medications %}
                 <div class="mt-4">
                     <h5><i class="fas fa-pills me-2"></i>Medication Recommendations</h5>
-                    {% for med in ai_diagnosis_data.treatment.medications %}
+                    
+                    {% if ai_diagnosis_data.treatment.medications.primary_medications %}
+                    <h6 class="mt-3">Primary Medications:</h6>
+                    {% for med in ai_diagnosis_data.treatment.medications.primary_medications %}
                     <div class="medication-card">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
@@ -424,6 +419,38 @@
                         </div>
                     </div>
                     {% endfor %}
+                    {% endif %}
+                    
+                    {% if ai_diagnosis_data.treatment.medications.alternative_medications %}
+                    <h6 class="mt-3">Alternative Medications:</h6>
+                    {% for med in ai_diagnosis_data.treatment.medications.alternative_medications %}
+                    <div class="medication-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong class="text-info">{{ med.medication }}</strong>
+                                <p class="mb-1 mt-2">
+                                    <i class="fas fa-tablets me-1"></i><strong>Dosage:</strong> {{ med.dosage }}<br>
+                                    <i class="fas fa-calendar me-1"></i><strong>Duration:</strong> {{ med.duration }}<br>
+                                    <i class="fas fa-info-circle me-1"></i><strong>Instructions:</strong> {{ med.instructions }}
+                                </p>
+                                {% if med.contraindications %}
+                                <p class="text-danger mb-0">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <strong>Warning:</strong> {{ med.contraindications %}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    
+                    {% if ai_diagnosis_data.treatment.medications.evidence_sources %}
+                    <div class="alert alert-info mt-3">
+                        <small><i class="fas fa-book-medical me-2"></i><strong>Evidence Sources:</strong> 
+                        {{ ai_diagnosis_data.treatment.medications.evidence_sources|join:", " }}</small>
+                    </div>
+                    {% endif %}
                 </div>
                 {% endif %}
 
@@ -441,11 +468,28 @@
                     {% endfor %}
                 </div>
                 {% endif %}
+                
+                <!-- Treatment Evidence Sources -->
+                {% if ai_diagnosis_data.treatment.evidence_sources %}
+                <div class="mt-4">
+                    <h6><i class="fas fa-book-medical me-2"></i>Treatment Guidelines Used:</h6>
+                    <div class="alert alert-success">
+                        <ul class="mb-0">
+                        {% for source in ai_diagnosis_data.treatment.evidence_sources %}
+                            <li><small>{{ source }}</small></li>
+                        {% endfor %}
+                        </ul>
+                        <small class="text-muted mt-2 d-block">
+                            <i class="fas fa-check-circle me-1"></i>Treatment recommendations are based on these medical guidelines from the knowledge base.
+                        </small>
+                    </div>
+                </div>
+                {% endif %}
             </div>
             {% endif %}
 
-            <!-- Knowledge Base References -->
-            {% if ai_diagnosis_data.retriever.sources %}
+            <!-- Knowledge Base References - Only visible to Doctors and Experts -->
+            {% if ai_diagnosis_data.retriever.sources and user.role != 'NURSE' %}
             <div class="report-section">
                 <h3 class="section-title">
                     <i class="fas fa-book-medical"></i>Medical Knowledge References

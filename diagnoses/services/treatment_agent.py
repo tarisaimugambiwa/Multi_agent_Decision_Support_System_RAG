@@ -212,46 +212,51 @@ class TreatmentAgent:
     def _extract_medications_from_guidelines(self, guidelines: Dict) -> List[Dict]:
         """
         Extract medication recommendations from RAG results.
-        Returns generic medications if no specific ones found.
+        Returns actual medication information from knowledge base.
         """
         medications = []
         
         # Parse guidelines for medication mentions
         for guideline in guidelines.get('guidelines', []):
-            content = guideline.get('content', '').lower()
+            content = guideline.get('content', '')
             source = guideline.get('source', 'Unknown')
             
-            # Look for common medication patterns (simplified extraction)
-            # In production, this would use more sophisticated NLP
-            if 'paracetamol' in content or 'acetaminophen' in content:
-                medications.append({
-                    'name': 'Paracetamol (Acetaminophen)',
-                    'dosage': 'Per medical guidance',
-                    'frequency': 'As prescribed',
-                    'route': 'Oral',
-                    'source': source
-                })
+            if not content:
+                continue
             
-            if 'ibuprofen' in content:
-                medications.append({
-                    'name': 'Ibuprofen',
-                    'dosage': 'Per medical guidance',
-                    'frequency': 'As prescribed',
-                    'route': 'Oral',
-                    'source': source
-                })
+            # Extract sentences that mention medications
+            sentences = [s.strip() for s in content.split('.') if s.strip()]
+            
+            for sentence in sentences:
+                sentence_lower = sentence.lower()
+                
+                # Look for medication-related keywords
+                if any(keyword in sentence_lower for keyword in [
+                    'medication', 'drug', 'medicine', 'administer', 'prescribe',
+                    'tablet', 'capsule', 'injection', 'dose', 'mg', 'ml',
+                    'treatment includes', 'give', 'oral', 'intravenous'
+                ]):
+                    # Extract the full sentence as medication guidance
+                    medications.append({
+                        'name': sentence,  # Store the full guidance
+                        'dosage': 'As specified in medical guidelines',
+                        'duration': 'Per treatment protocol',
+                        'instructions': f'Source: {source}',
+                        'source': source
+                    })
         
-        # If no medications extracted, return generic recommendation
-        if not medications:
-            medications.append({
-                'name': 'Consult WHO Essential Medicines List',
-                'dosage': 'Per clinical guidelines',
-                'frequency': 'As prescribed by physician',
-                'route': 'Various',
-                'source': 'Medical guidelines required'
-            })
+        # If medications found in knowledge base, use them
+        if medications:
+            return medications[:5]  # Return top 5 medication recommendations
         
-        return medications
+        # Fallback: Return condition-specific guidance
+        return [{
+            'name': 'Medication recommendations available in knowledge base',
+            'dosage': 'Per clinical guidelines',
+            'duration': 'As prescribed by healthcare provider',
+            'instructions': 'Consult full medical guidelines for specific medication protocols, dosages, and contraindications based on patient condition and history.',
+            'source': 'WHO Essential Medicines List and Treatment Guidelines'
+        }]
     
     def _generate_action_steps_from_guidelines(
         self, 
@@ -266,42 +271,72 @@ class TreatmentAgent:
         short_term = []
         follow_up = []
         
-        # Extract recommendations from guidelines
+        # Extract detailed recommendations from guidelines
         if guidelines.get('guidelines'):
-            for guideline in guidelines['guidelines'][:2]:  # Use top 2 guidelines
-                content = guideline.get('content', '')
+            for guideline in guidelines['guidelines']:  # Use all available guidelines
+                content = guideline.get('content', '').strip()
+                source = guideline.get('source', 'medical literature')
                 
-                # Simple extraction (in production, use better NLP)
-                if 'immediate' in content.lower() or urgency_level == 'CRITICAL':
-                    immediate.append(f"Follow guidance from {guideline.get('source', 'medical literature')}")
+                if not content:
+                    continue
                 
-                if 'treatment' in content.lower():
-                    short_term.append(f"Apply treatment protocol from {guideline.get('source', 'guidelines')}")
+                # Extract actionable information from the guideline content
+                # Split content into sentences for better parsing
+                sentences = [s.strip() for s in content.split('.') if s.strip()]
                 
-                if 'follow' in content.lower() or 'monitor' in content.lower():
-                    follow_up.append(f"Monitor per {guideline.get('source', 'medical guidelines')}")
+                for sentence in sentences[:5]:  # Use first 5 sentences of each guideline
+                    sentence_lower = sentence.lower()
+                    
+                    # Categorize based on keywords and urgency
+                    if any(word in sentence_lower for word in ['immediate', 'urgent', 'emergency', 'critical', 'now', 'immediately']):
+                        if urgency_level in ['CRITICAL', 'HIGH'] and sentence not in immediate:
+                            immediate.append(f"{sentence}")
+                    
+                    elif any(word in sentence_lower for word in ['administer', 'give', 'provide', 'treat', 'medication', 'drug', 'therapy']):
+                        if sentence not in short_term:
+                            short_term.append(f"{sentence}")
+                    
+                    elif any(word in sentence_lower for word in ['monitor', 'observe', 'follow-up', 'reassess', 'review', 'track']):
+                        if sentence not in follow_up:
+                            follow_up.append(f"{sentence}")
+                    
+                    # If sentence has treatment info but doesn't match above, add to short-term
+                    elif any(word in sentence_lower for word in ['treatment', 'manage', 'care', 'intervention']) and sentence not in short_term:
+                        short_term.append(f"{sentence}")
         
-        # Add standard steps based on urgency
+        # Add standard emergency steps based on urgency
         if urgency_level == 'CRITICAL':
-            immediate.insert(0, '⚠️ IMMEDIATE MEDICAL ATTENTION REQUIRED')
-            immediate.append('Call emergency services or go to nearest emergency department')
-            immediate.append('Monitor vital signs continuously')
+            immediate.insert(0, '🚨 CALL EMERGENCY SERVICES IMMEDIATELY OR GO TO NEAREST EMERGENCY DEPARTMENT')
+            immediate.insert(1, 'Monitor vital signs continuously (blood pressure, heart rate, breathing)')
+            immediate.insert(2, 'Keep patient calm and in a comfortable position')
+            if not any('oxygen' in action.lower() for action in immediate):
+                immediate.append('Prepare to administer oxygen if available')
         elif urgency_level == 'HIGH':
-            immediate.append('Seek medical evaluation within 24 hours')
-            immediate.append('Monitor symptoms closely')
+            immediate.insert(0, '⚠️ Seek urgent medical evaluation within 2-4 hours')
+            immediate.append('Monitor symptoms closely and document any changes')
+            immediate.append('Have patient rest and avoid strenuous activity')
         else:
-            immediate.append('Schedule routine medical consultation')
+            immediate.append('Schedule medical consultation within 24-48 hours')
+            immediate.append('Monitor symptoms and document progression')
         
-        short_term.append('Follow prescribed treatment plan')
-        short_term.append('Take medications as directed')
+        # Add standard short-term actions if none from guidelines
+        if not short_term:
+            short_term.append('Follow treatment plan as prescribed by healthcare provider')
+            short_term.append('Take all medications as directed (complete full course)')
+            short_term.append('Maintain adequate hydration and nutrition')
+            short_term.append('Get adequate rest to support recovery')
         
-        follow_up.append('Schedule follow-up appointment')
-        follow_up.append('Report any worsening symptoms immediately')
+        # Add standard follow-up if none from guidelines
+        if not follow_up:
+            follow_up.append('Schedule follow-up appointment in 3-7 days or as directed')
+            follow_up.append('Report immediately if symptoms worsen or new symptoms develop')
+            follow_up.append('Keep a symptom diary to track progress')
+            follow_up.append('Return to emergency department if condition deteriorates')
         
         return {
-            'immediate': immediate,
-            'short_term': short_term,
-            'follow_up': follow_up
+            'immediate': immediate[:10],  # Limit to 10 items for readability
+            'short_term': short_term[:10],
+            'follow_up': follow_up[:8]
         }
     
     def suggest_tests_and_referrals(

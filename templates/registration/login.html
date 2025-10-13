@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -319,6 +320,31 @@
             padding: 20px 15px;
         }
     }
+    
+    /* Image Section Styles */
+    .login-image-section {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .login-image-section img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        object-fit: cover;
+    }
+    
+    @media (max-width: 991px) {
+        .login-image-section {
+            padding: 30px;
+            min-height: 300px;
+        }
+    }
 </style>
 </head>
 <body>
@@ -445,70 +471,13 @@
                 </div>
             </div>
 
-            <!-- Right Column - Demo Credentials -->
+            <!-- Right Column - Image -->
             <div class="col-lg-5">
-                <div class="demo-credentials">
-                    <h3><i class="fas fa-key me-2"></i>Demo Credentials</h3>
-                    <p class="subtitle">Click on any credential box to auto-fill the login form</p>
-
-                    <!-- Nurse Credentials -->
-                    <div class="credential-box nurse" onclick="fillCredentials('nurse', 'nurse123')">
-                        <div class="credential-header">
-                            <div class="credential-icon">
-                                <i class="fas fa-user-nurse"></i>
-                            </div>
-                            <div class="credential-role">
-                                <h4>Nurse Account</h4>
-                                <span class="badge">Limited Access</span>
-                            </div>
-                        </div>
-                        <div class="credential-details">
-                            <div class="credential-item">
-                                <span class="label">Username:</span>
-                                <span class="value">nurse</span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="label">Password:</span>
-                                <span class="value">nurse123</span>
-                            </div>
-                        </div>
-                        <div class="credential-footer">
-                            <i class="fas fa-mouse-pointer me-1"></i>Click to fill
-                        </div>
-                    </div>
-
-                    <!-- Doctor Credentials -->
-                    <div class="credential-box doctor" onclick="fillCredentials('doctor', 'doctor123')">
-                        <div class="credential-header">
-                            <div class="credential-icon">
-                                <i class="fas fa-user-md"></i>
-                            </div>
-                            <div class="credential-role">
-                                <h4>Doctor Account</h4>
-                                <span class="badge">Full Access</span>
-                            </div>
-                        </div>
-                        <div class="credential-details">
-                            <div class="credential-item">
-                                <span class="label">Username:</span>
-                                <span class="value">doctor</span>
-                            </div>
-                            <div class="credential-item">
-                                <span class="label">Password:</span>
-                                <span class="value">doctor123</span>
-                            </div>
-                        </div>
-                        <div class="credential-footer">
-                            <i class="fas fa-mouse-pointer me-1"></i>Click to fill
-                        </div>
-                    </div>
-
-                    <div class="security-note">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <small>These are demonstration accounts for testing purposes only</small>
-                    </div>
+                <div class="login-image-section">
+                    <img src="{% static 'login.jpg' %}" alt="Medical AI System" class="img-fluid">
                 </div>
             </div>
+          
         </div>
     </div>
 </div>

@@ -23,6 +23,8 @@ from django.contrib.auth import views as auth_views
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
+from django.conf import settings
+from django.conf.urls.static import static
 
 # Import views for direct URL patterns
 from patients.views import nurse_dashboard, doctor_dashboard
@@ -243,3 +245,7 @@ urlpatterns = [
     # App users (nurse/doctor) should use /accounts/login/ NOT /system-admin/
     path("system-admin/", admin.site.urls),
 ]
+
+# Serve static files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.BASE_DIR / 'assets')

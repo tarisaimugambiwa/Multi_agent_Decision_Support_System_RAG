@@ -361,7 +361,7 @@
                 <div class="form-section">
                     <div class="section-header">
                         <h3 class="section-title">
-                            <i class="fas fa-notes-medical me-2 text-warning"></i>Symptoms & Chief Complaints
+                            <i class="fas fa-notes-medical me-2 text-warning"></i>Symptoms
                         </h3>
                     </div>
                     
@@ -414,6 +414,12 @@
                         </div>
                         
                         <div class="vital-input-group">
+                            <label for="weight" class="form-label">Weight</label>
+                            <input type="number" step="0.1" class="form-control" id="weight" name="weight" placeholder="150">
+                            <span class="vital-unit">lbs</span>
+                        </div>
+                        
+                        <div class="vital-input-group">
                             <label for="blood_pressure_systolic" class="form-label">Blood Pressure (Systolic)</label>
                             <input type="number" class="form-control" id="blood_pressure_systolic" name="blood_pressure_systolic" placeholder="120">
                             <span class="vital-unit">mmHg</span>
@@ -423,24 +429,6 @@
                             <label for="blood_pressure_diastolic" class="form-label">Blood Pressure (Diastolic)</label>
                             <input type="number" class="form-control" id="blood_pressure_diastolic" name="blood_pressure_diastolic" placeholder="80">
                             <span class="vital-unit">mmHg</span>
-                        </div>
-                        
-                        <div class="vital-input-group">
-                            <label for="heart_rate" class="form-label">Heart Rate</label>
-                            <input type="number" class="form-control" id="heart_rate" name="heart_rate" placeholder="72">
-                            <span class="vital-unit">BPM</span>
-                        </div>
-                        
-                        <div class="vital-input-group">
-                            <label for="respiratory_rate" class="form-label">Respiratory Rate</label>
-                            <input type="number" class="form-control" id="respiratory_rate" name="respiratory_rate" placeholder="16">
-                            <span class="vital-unit">/min</span>
-                        </div>
-                        
-                        <div class="vital-input-group">
-                            <label for="oxygen_saturation" class="form-label">Oxygen Saturation</label>
-                            <input type="number" class="form-control" id="oxygen_saturation" name="oxygen_saturation" placeholder="98">
-                            <span class="vital-unit">%</span>
                         </div>
                     </div>
                     
@@ -635,12 +623,10 @@ $(document).ready(function() {
         // Prepare vital signs data
         const vitalSigns = {
             temperature: $('#temperature').val(),
+            weight: $('#weight').val(),
             blood_pressure: $('#blood_pressure_systolic').val() && $('#blood_pressure_diastolic').val() 
                 ? `${$('#blood_pressure_systolic').val()}/${$('#blood_pressure_diastolic').val()}`
-                : '',
-            heart_rate: $('#heart_rate').val(),
-            respiratory_rate: $('#respiratory_rate').val(),
-            oxygen_saturation: $('#oxygen_saturation').val()
+                : ''
         };
         
         // Remove empty vital signs
@@ -699,19 +685,6 @@ $(document).ready(function() {
         }
     });
     
-    // Heart rate validation
-    $('#heart_rate').on('input', function() {
-        const hr = parseInt($(this).val()) || 0;
-        if (hr > 0 && (hr < 30 || hr > 250)) {
-            $(this).addClass('is-invalid');
-            $(this).siblings('.invalid-feedback').remove();
-            $(this).after('<div class="invalid-feedback">Heart rate should be between 30-250 BPM</div>');
-        } else {
-            $(this).removeClass('is-invalid');
-            $(this).siblings('.invalid-feedback').remove();
-        }
-    });
-    
     // Temperature validation
     $('#temperature').on('input', function() {
         const temp = parseFloat($(this).val()) || 0;
@@ -719,6 +692,19 @@ $(document).ready(function() {
             $(this).addClass('is-invalid');
             $(this).siblings('.invalid-feedback').remove();
             $(this).after('<div class="invalid-feedback">Temperature should be between 90-110°F</div>');
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).siblings('.invalid-feedback').remove();
+        }
+    });
+    
+    // Weight validation
+    $('#weight').on('input', function() {
+        const weight = parseFloat($(this).val()) || 0;
+        if (weight > 0 && (weight < 50 || weight > 800)) {
+            $(this).addClass('is-invalid');
+            $(this).siblings('.invalid-feedback').remove();
+            $(this).after('<div class="invalid-feedback">Weight should be between 50-800 lbs</div>');
         } else {
             $(this).removeClass('is-invalid');
             $(this).siblings('.invalid-feedback').remove();

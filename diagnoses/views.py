@@ -228,6 +228,7 @@ class CaseCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
                 'diagnosis': {
                     'primary_diagnosis': diagnosis_results['primary_diagnosis'],
                     'confidence': diagnosis_results['confidence_score'],
+                    'explanation': diagnosis_results.get('explanation', ''),  # Plain language explanation
                     'differential_diagnoses': diagnosis_results['differential_diagnoses'],
                     'red_flags': diagnosis_results['red_flags'],
                     'emergency_conditions': diagnosis_results['emergency_conditions'],
@@ -435,18 +436,18 @@ def get_patient_history_ajax(request, patient_id):
         patient = get_object_or_404(Patient, id=patient_id)
         recent_records = MedicalRecord.objects.filter(
             patient=patient
-        ).order_by('-date')[:3]
+        ).order_by('-visit_date')[:3]
         
         history_data = {
             'patient_name': patient.full_name,
-            'age': patient.age,
-            'gender': patient.gender,
+            'age': patient.get_age(),
+            'gender': patient.get_gender_display(),
             'allergies': patient.allergies or 'None reported',
             'recent_diagnoses': [
                 {
-                    'date': record.date.isoformat(),
-                    'diagnosis': record.diagnosis,
-                    'provider': record.provider.get_full_name() if record.provider else 'Unknown'
+                    'date': record.visit_date.strftime('%Y-%m-%d'),
+                    'diagnosis': record.diagnosis or 'No diagnosis recorded',
+                    'provider': record.user.get_full_name() if record.user else 'Unknown'
                 }
                 for record in recent_records
             ]
@@ -456,7 +457,6 @@ def get_patient_history_ajax(request, patient_id):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
 
 def quick_triage_ajax(request):
     """

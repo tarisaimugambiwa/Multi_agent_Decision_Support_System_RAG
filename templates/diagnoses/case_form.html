@@ -98,19 +98,14 @@
                             </div>
                         </div>
 
-                        <!-- Symptoms and Chief Complaints -->
+                        <!-- Symptoms -->
                         <div class="form-section">
-                            <h5><i class="fas fa-notes-medical me-2"></i>Symptoms & Chief Complaints</h5>
+                            <h5><i class="fas fa-notes-medical me-2"></i>Symptoms</h5>
                             <label for="{{ form.symptoms.id_for_label }}" class="form-label">Symptoms *</label>
                             {{ form.symptoms }}
                             {% if form.symptoms.errors %}
                                 <div class="text-danger">{{ form.symptoms.errors }}</div>
                             {% endif %}
-                            
-                            <button type="button" class="btn btn-outline-success mt-2" id="quick-triage">
-                                <i class="fas fa-tachometer-alt me-2"></i>Quick Triage Analysis
-                            </button>
-                            <div id="triage-result"></div>
                         </div>
 
                         <!-- Vital Signs -->
@@ -125,8 +120,8 @@
                                 </div>
                                 
                                 <div class="col-md-6">
-                                    <label for="heart_rate" class="form-label">Heart Rate (BPM)</label>
-                                    <input type="number" class="form-control" id="heart_rate" name="heart_rate" placeholder="72">
+                                    <label for="weight" class="form-label">Weight (lbs)</label>
+                                    <input type="number" step="0.1" class="form-control" id="weight" name="weight" placeholder="150">
                                 </div>
                                 
                                 <div class="col-md-6">
@@ -137,16 +132,6 @@
                                 <div class="col-md-6">
                                     <label for="blood_pressure_diastolic" class="form-label">BP Diastolic (mmHg)</label>
                                     <input type="number" class="form-control" id="blood_pressure_diastolic" name="blood_pressure_diastolic" placeholder="80">
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label for="respiratory_rate" class="form-label">Respiratory Rate (/min)</label>
-                                    <input type="number" class="form-control" id="respiratory_rate" name="respiratory_rate" placeholder="16">
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label for="oxygen_saturation" class="form-label">Oxygen Saturation (%)</label>
-                                    <input type="number" class="form-control" id="oxygen_saturation" name="oxygen_saturation" placeholder="98">
                                 </div>
                             </div>
                         </div>
@@ -212,9 +197,52 @@
         </div>
     </div>
 </div>
+
+<!-- AI Processing Modal -->
+<div class="modal fade" id="aiProcessingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <div class="spinner-border text-primary mb-3" style="width: 4rem; height: 4rem;" role="status">
+                    <span class="visually-hidden">Processing...</span>
+                </div>
+                <h4 class="mb-3">AI Analysis in Progress</h4>
+                <p class="text-muted mb-4">Please wait while our multi-agent system analyzes the case...</p>
+                
+                <div class="progress mb-3" style="height: 30px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" 
+                         id="progress-bar"
+                         style="width: 10%"
+                         aria-valuenow="10" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        <span id="progress-text">Initializing...</span>
+                    </div>
+                </div>
+                
+                <div class="small text-muted" id="progress-stage">
+                    <i class="fas fa-robot me-2"></i>Starting AI agents...
+                </div>
+                
+                <div class="alert alert-info mt-4 small mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Processing time:</strong> 30-90 seconds depending on case complexity and server load.
+                    <br><small class="text-muted mt-1 d-block">
+                        The AI is analyzing medical knowledge, generating diagnoses, and creating treatment plans.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
+<!-- jQuery (required for AJAX) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script>
 $(document).ready(function() {
     // Load patient history when patient is selected
@@ -224,6 +252,9 @@ $(document).ready(function() {
             alert('Please select a patient first.');
             return;
         }
+
+        // Show loading state
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Loading...');
 
         $.ajax({
             url: "{% url 'diagnoses:patient_history_ajax' 0 %}".replace('0', patientId),
@@ -248,54 +279,34 @@ $(document).ready(function() {
 
                 $('#history-content').html(historyHtml);
                 $('#patient-history').slideDown();
+                
+                // Reset button
+                $('#load-patient-history').prop('disabled', false).html('<i class="fas fa-history me-2"></i>Load Patient History');
             },
-            error: function(xhr) {
-                alert('Error loading patient history: ' + (xhr.responseJSON?.error || 'Unknown error'));
-            }
-        });
-    });
-
-    // Quick triage analysis
-    $('#quick-triage').click(function() {
-        const symptoms = $('#id_symptoms').val().trim();
-        if (!symptoms) {
-            alert('Please enter symptoms first.');
-            return;
-        }
-
-        $.ajax({
-            url: "{% url 'diagnoses:quick_triage_ajax' %}",
-            method: 'POST',
-            data: {
-                'symptoms': symptoms,
-                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
-            },
-            success: function(data) {
-                const urgencyClass = `triage-${data.urgency_level}`;
-                const resultHtml = `
-                    <div class="triage-result ${urgencyClass}">
-                        <strong>Triage Analysis:</strong> ${data.message}
-                        <br><small>AI Urgency: ${data.urgency_level.toUpperCase()}</small>
-                    </div>
-                `;
-                $('#triage-result').html(resultHtml);
-
-                // Update priority if AI suggests different level
-                if (data.recommended_priority) {
-                    $('#id_priority').val(data.recommended_priority);
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', status, error);
+                console.error('Response:', xhr.responseText);
+                
+                let errorMsg = 'Error loading patient history';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg += ': ' + xhr.responseJSON.error;
+                } else if (xhr.status === 404) {
+                    errorMsg += ': Patient history endpoint not found';
+                } else if (xhr.status === 500) {
+                    errorMsg += ': Server error';
+                } else {
+                    errorMsg += ': ' + error;
                 }
-            },
-            error: function(xhr) {
-                $('#triage-result').html(`
-                    <div class="alert alert-danger">
-                        Error: ${xhr.responseJSON?.error || 'Triage analysis failed'}
-                    </div>
-                `);
+                
+                alert(errorMsg);
+                
+                // Reset button
+                $('#load-patient-history').prop('disabled', false).html('<i class="fas fa-history me-2"></i>Load Patient History');
             }
         });
     });
 
-    // Form submission with loading state
+    // Form submission with AI progress modal
     $('#case-form').submit(function(e) {
         // Prepare vital signs data from individual fields
         const vitalSigns = {};
@@ -303,20 +314,14 @@ $(document).ready(function() {
         const temperature = $('#temperature').val();
         if (temperature) vitalSigns.temperature = parseFloat(temperature);
         
+        const weight = $('#weight').val();
+        if (weight) vitalSigns.weight = parseFloat(weight);
+        
         const systolic = $('#blood_pressure_systolic').val();
         const diastolic = $('#blood_pressure_diastolic').val();
         if (systolic && diastolic) {
             vitalSigns.blood_pressure = `${systolic}/${diastolic}`;
         }
-        
-        const heartRate = $('#heart_rate').val();
-        if (heartRate) vitalSigns.heart_rate = parseInt(heartRate);
-        
-        const respRate = $('#respiratory_rate').val();
-        if (respRate) vitalSigns.respiratory_rate = parseInt(respRate);
-        
-        const o2sat = $('#oxygen_saturation').val();
-        if (o2sat) vitalSigns.oxygen_saturation = parseInt(o2sat);
         
         // Add hidden field with JSON data
         if (!$('input[name="vital_signs"]').length) {
@@ -329,8 +334,39 @@ $(document).ready(function() {
             $('input[name="vital_signs"]').val(JSON.stringify(vitalSigns));
         }
         
+        // Show AI processing modal with simulated progress
+        const modal = new bootstrap.Modal(document.getElementById('aiProcessingModal'));
+        modal.show();
+        
+        // Simulate progress stages
+        let progress = 10;
+        const stages = [
+            { percent: 20, text: '20%', stage: 'Initializing AI agents...' },
+            { percent: 35, text: '35%', stage: 'Searching medical knowledge base...' },
+            { percent: 50, text: '50%', stage: 'Analyzing symptoms...' },
+            { percent: 65, text: '65%', stage: 'Generating differential diagnoses...' },
+            { percent: 80, text: '80%', stage: 'Creating treatment plan...' },
+            { percent: 95, text: '95%', stage: 'Finalizing results...' }
+        ];
+        
+        let currentStage = 0;
+        const progressInterval = setInterval(function() {
+            if (currentStage < stages.length) {
+                progress = stages[currentStage].percent;
+                $('#progress-bar')
+                    .css('width', progress + '%')
+                    .attr('aria-valuenow', progress)
+                    .find('#progress-text').text(stages[currentStage].text);
+                $('#progress-stage').html('<i class="fas fa-robot me-2"></i>' + stages[currentStage].stage);
+                currentStage++;
+            } else {
+                clearInterval(progressInterval);
+            }
+        }, 2000); // Update every 2 seconds
+        
+        // Disable button
         $('#submit-btn').prop('disabled', true).html(
-            '<i class="fas fa-spinner fa-spin me-2"></i>Creating Case & Running AI Analysis...'
+            '<i class="fas fa-spinner fa-spin me-2"></i>Processing...'
         );
     });
 });

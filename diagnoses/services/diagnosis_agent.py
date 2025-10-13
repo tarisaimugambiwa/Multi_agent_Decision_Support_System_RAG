@@ -103,6 +103,7 @@ class DiagnosisAgent:
         analysis = {
             'timestamp': datetime.now().isoformat(),
             'primary_diagnosis': ai_diagnosis.get('diagnosis', 'Unable to determine'),
+            'explanation': ai_diagnosis.get('explanation', ''),  # Plain language explanation
             'confidence_score': confidence_score,
             'differential_diagnoses': differential_diagnoses,
             'red_flags': red_flags,
@@ -268,6 +269,9 @@ class DiagnosisAgent:
                 # Extract primary diagnosis from diagnostic engine results
                 primary_diagnoses = ai_result.get('primary_diagnoses', [])
                 
+                # Extract plain language explanation
+                diagnosis_explanation = ai_result.get('diagnosis_explanation', '')
+                
                 if primary_diagnoses and len(primary_diagnoses) > 0:
                     top_diagnosis = primary_diagnoses[0]
                     diagnosis_name = top_diagnosis.get('condition', 'Unknown condition')
@@ -291,6 +295,7 @@ class DiagnosisAgent:
                     'diagnosis': diagnosis_name,
                     'confidence': diagnosis_confidence,
                     'reasoning': reasoning,
+                    'explanation': diagnosis_explanation,  # Plain language explanation
                     'urgency_level': ai_result.get('urgency_level', 'moderate'),
                     'severity_score': ai_result.get('severity_score', 0.5),
                     'rag_sources': retriever_context.get('sources', []) if retriever_context else [],
@@ -302,6 +307,7 @@ class DiagnosisAgent:
                     'diagnosis': str(ai_result),
                     'reasoning': 'AI diagnosis generated',
                     'confidence': 0.6,
+                    'explanation': '',  # No explanation available
                     'rag_sources': retriever_context.get('sources', []) if retriever_context else [],
                     'knowledge_base_used': retriever_context.get('knowledge_base_used', False) if retriever_context else False
                 }

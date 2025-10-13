@@ -33,9 +33,11 @@ Based on the patient information and medical knowledge provided, please:
 3. Indicate any red flags that require immediate attention
 4. Recommend follow-up care or referral if necessary
 5. Provide a confidence score (0-100) for your assessment
+6. Explain the diagnosis in simple language that a nurse can understand and explain to the patient
 
 Format your response as structured JSON with the following fields:
-- primary_diagnosis: The most likely condition
+- primary_diagnosis: The most likely condition (medical term)
+- diagnosis_explanation: A clear, simple explanation of what this condition means, what causes it, and why you think the patient has it. Write this in plain language that anyone can understand, avoiding medical jargon.
 - differential_diagnoses: List of other possible conditions
 - treatment_plan: Recommended treatments and medications
 - red_flags: Any warning signs requiring immediate attention
@@ -451,7 +453,7 @@ class MedicalAIDiagnosticEngine:
                 "format": "json"  # Request JSON output
             }
             
-            response = requests.post(ollama_url, json=payload, timeout=180)  # 3 minutes for first request
+            response = requests.post(ollama_url, json=payload, timeout=120)  # Reduced to 2 minutes
             
             if response.status_code == 200:
                 result = response.json()
@@ -577,6 +579,7 @@ class MedicalAIDiagnosticEngine:
             ai_diagnosis = None
             ollama_confidence = None
             ollama_reasoning = None
+            diagnosis_explanation = None
             
             if knowledge_results:
                 prompt = self._format_medical_prompt(symptoms, patient_history, knowledge_results)
@@ -589,6 +592,9 @@ class MedicalAIDiagnosticEngine:
                     ai_diagnosis = ai_response.get('primary_diagnosis', ai_response.get('text_response', ''))
                     ollama_confidence = ai_response.get('confidence_score', 0) / 100.0  # Convert to 0-1 scale
                     ollama_reasoning = ai_response.get('reasoning', '')
+                    
+                    # Extract plain language explanation
+                    diagnosis_explanation = ai_response.get('diagnosis_explanation', '')
                     
                     # Update differential diagnoses if provided by Ollama
                     if 'differential_diagnoses' in ai_response and ai_response['differential_diagnoses']:
@@ -659,6 +665,7 @@ class MedicalAIDiagnosticEngine:
                 'ai_diagnosis': ai_diagnosis,  # Ollama's diagnosis
                 'ai_reasoning': ollama_reasoning,  # Ollama's reasoning
                 'ai_confidence': ollama_confidence,  # Ollama's confidence
+                'diagnosis_explanation': diagnosis_explanation,  # Plain language explanation for nurses
                 'recommendations': self._generate_recommendations(
                     severity_score, rule_based_diagnoses, urgency_level
                 ),
