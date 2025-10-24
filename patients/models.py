@@ -12,8 +12,8 @@ class Patient(models.Model):
         ('P', 'Prefer not to say'),
     ]
     
-    first_name = models.CharField(max_length=100, help_text='Patient first name')
-    last_name = models.CharField(max_length=100, help_text='Patient last name')
+    first_name = models.CharField(max_length=100, help_text='Patient first name', db_index=True)
+    last_name = models.CharField(max_length=100, help_text='Patient last name', db_index=True)
     date_of_birth = models.DateField(help_text='Patient date of birth')
     gender = models.CharField(
         max_length=1,
@@ -23,7 +23,8 @@ class Patient(models.Model):
     phone_number = models.CharField(
         max_length=20,
         blank=True,
-        help_text='Patient contact phone number'
+        help_text='Patient contact phone number',
+        db_index=True
     )
     address = models.TextField(
         blank=True,
@@ -42,6 +43,11 @@ class Patient(models.Model):
     
     class Meta:
         ordering = ['last_name', 'first_name']
+        indexes = [
+            models.Index(fields=['last_name', 'first_name']),
+            models.Index(fields=['phone_number']),
+            models.Index(fields=['created_at']),
+        ]
     
     def __str__(self):
         return f"{self.first_name} {self.last_name}"

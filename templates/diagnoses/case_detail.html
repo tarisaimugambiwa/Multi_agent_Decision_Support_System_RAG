@@ -379,16 +379,6 @@
                     </div>
                     {% endfor %}
                     {% endif %}
-
-                    {% if ai_diagnosis_data.treatment.follow_up_actions %}
-                    <h5 class="mt-3">Follow-up Actions</h5>
-                    {% for action in ai_diagnosis_data.treatment.follow_up_actions %}
-                    <div class="action-item">
-                        <i class="fas fa-calendar-check text-success me-2"></i>
-                        {{ action }}
-                    </div>
-                    {% endfor %}
-                    {% endif %}
                 </div>
                 {% endif %}
 
@@ -402,8 +392,11 @@
                     {% for med in ai_diagnosis_data.treatment.medications.primary_medications %}
                     <div class="medication-card">
                         <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <strong class="text-success">{{ med.medication }}</strong>
+                            <div class="w-100">
+                                <strong class="text-success">
+                                    <i class="fas fa-prescription-bottle me-2"></i>
+                                    {{ med.name }}
+                                </strong>
                                 <p class="mb-1 mt-2">
                                     <i class="fas fa-tablets me-1"></i><strong>Dosage:</strong> {{ med.dosage }}<br>
                                     <i class="fas fa-calendar me-1"></i><strong>Duration:</strong> {{ med.duration }}<br>
@@ -422,12 +415,15 @@
                     {% endif %}
                     
                     {% if ai_diagnosis_data.treatment.medications.alternative_medications %}
-                    <h6 class="mt-3">Alternative Medications:</h6>
+                    <h6 class="mt-3">Alternative Medications (if primary not available):</h6>
                     {% for med in ai_diagnosis_data.treatment.medications.alternative_medications %}
                     <div class="medication-card">
                         <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <strong class="text-info">{{ med.medication }}</strong>
+                            <div class="w-100">
+                                <strong class="text-info">
+                                    <i class="fas fa-prescription-bottle-alt me-2"></i>
+                                    {{ med.name }}
+                                </strong>
                                 <p class="mb-1 mt-2">
                                     <i class="fas fa-tablets me-1"></i><strong>Dosage:</strong> {{ med.dosage }}<br>
                                     <i class="fas fa-calendar me-1"></i><strong>Duration:</strong> {{ med.duration }}<br>
@@ -444,13 +440,6 @@
                     </div>
                     {% endfor %}
                     {% endif %}
-                    
-                    {% if ai_diagnosis_data.treatment.medications.evidence_sources %}
-                    <div class="alert alert-info mt-3">
-                        <small><i class="fas fa-book-medical me-2"></i><strong>Evidence Sources:</strong> 
-                        {{ ai_diagnosis_data.treatment.medications.evidence_sources|join:", " }}</small>
-                    </div>
-                    {% endif %}
                 </div>
                 {% endif %}
 
@@ -466,23 +455,6 @@
                         {{ step }}
                     </div>
                     {% endfor %}
-                </div>
-                {% endif %}
-                
-                <!-- Treatment Evidence Sources -->
-                {% if ai_diagnosis_data.treatment.evidence_sources %}
-                <div class="mt-4">
-                    <h6><i class="fas fa-book-medical me-2"></i>Treatment Guidelines Used:</h6>
-                    <div class="alert alert-success">
-                        <ul class="mb-0">
-                        {% for source in ai_diagnosis_data.treatment.evidence_sources %}
-                            <li><small>{{ source }}</small></li>
-                        {% endfor %}
-                        </ul>
-                        <small class="text-muted mt-2 d-block">
-                            <i class="fas fa-check-circle me-1"></i>Treatment recommendations are based on these medical guidelines from the knowledge base.
-                        </small>
-                    </div>
                 </div>
                 {% endif %}
             </div>

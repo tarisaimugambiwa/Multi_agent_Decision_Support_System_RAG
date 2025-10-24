@@ -142,13 +142,27 @@ Display AI Medical Report
    - Return to case list
 
 ### For Doctors:
-1. **Doctor Dashboard** → "View Cases" or "Knowledge Base"
-2. **Case List** → "View AI Report" button (green)
-3. **Review Report** with all AI analysis
-4. **Actions:**
+1. **Login as Doctor:**
+   ```
+   Username: doctor
+   Password: doctor123
+   ```
+
+2. **Go to Doctor Dashboard:**
+   - Click "View Cases" or "Knowledge Base"
+
+3. **Case List:**
+   - Find the patient/case you want to review
+   - Click the green "View AI Report" button
+
+4. **Review Report:**
+   - See full AI analysis, diagnosis, treatment, and references
+
+5. **Actions:**
    - Review diagnosis
    - Modify treatment plan
    - Approve/reject AI recommendations
+   - Add doctor notes
    - Access knowledge base for research
 
 ## 🎯 Example Workflow

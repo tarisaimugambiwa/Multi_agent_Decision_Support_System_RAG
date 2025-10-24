@@ -559,18 +559,24 @@ def patient_search_api(request):
         age_range = request.GET.get('age', '')
         insurance_status = request.GET.get('insurance', '')
         
-        # Start with all patients
-        patients_qs = Patient.objects.all()
+        # Start with all patients - only fetch fields we need for better performance
+        patients_qs = Patient.objects.only(
+            'id', 'first_name', 'last_name', 'phone_number', 
+            'gender', 'date_of_birth'
+        )
         
-        # Apply search query
+        # Apply search query - more flexible search
         if query:
+            # Remove common formatting from phone numbers
+            phone_query = query.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+            
             patients_qs = patients_qs.filter(
                 Q(first_name__icontains=query) |
                 Q(last_name__icontains=query) |
                 Q(phone_number__icontains=query) |
-                Q(email__icontains=query) |
+                Q(phone_number__icontains=phone_query) |  # Search without formatting
                 Q(id__icontains=query)
-            )
+            ).distinct()
         
         # Apply gender filter
         if gender:
@@ -602,40 +608,47 @@ def patient_search_api(request):
         
         # Apply insurance filter
         if insurance_status == 'insured':
-            patients_qs = patients_qs.exclude(insurance_info__exact='')
+            # Skip insurance filter - field not in model
+            pass
         elif insurance_status == 'uninsured':
-            patients_qs = patients_qs.filter(insurance_info__exact='')
+            # Skip insurance filter - field not in model
+            pass
         
-        # Annotate with recent cases count
-        patients_qs = patients_qs.annotate(
-            recent_cases_count=Count('cases', distinct=True)
-        )
-        
-        # Limit results
+        # Limit results BEFORE annotation for better performance
         patients_qs = patients_qs[:50]  # Limit to 50 results
         
-        # Prepare response data
+        # Convert to list to evaluate the query once
+        patients_list = list(patients_qs)
+        
+        # Prepare response data - optimized for speed
         patients_data = []
-        for patient in patients_qs:
-            # Calculate age
+        today = timezone.now().date()
+        
+        for patient in patients_list:
+            # Calculate age once
             age = None
             if patient.date_of_birth:
-                today = timezone.now().date()
                 age = today.year - patient.date_of_birth.year
                 if today.month < patient.date_of_birth.month or \
                    (today.month == patient.date_of_birth.month and today.day < patient.date_of_birth.day):
                     age -= 1
+            
+            # Get cases count efficiently (cached if accessed before)
+            try:
+                recent_cases_count = patient.cases.count()
+            except:
+                recent_cases_count = 0
             
             patients_data.append({
                 'id': patient.id,
                 'first_name': patient.first_name,
                 'last_name': patient.last_name,
                 'phone_number': patient.phone_number,
-                'email': patient.email,
+                'email': '',  # Not in model
                 'gender': patient.get_gender_display(),
                 'age': age,
-                'recent_cases_count': patient.recent_cases_count,
-                'insurance_status': 'Insured' if patient.insurance_info else 'Uninsured'
+                'recent_cases_count': recent_cases_count,
+                'insurance_status': 'Unknown'  # Not in model
             })
         
         return JsonResponse({

@@ -46,8 +46,16 @@
             min-height: calc(100vh - 76px);
             background: linear-gradient(135deg, var(--primary-color) 0%, #34495e 100%);
             padding: 20px 0;
-            position: sticky;
+            position: fixed;
             top: 76px;
+            left: 0;
+            height: calc(100vh - 76px);
+            width: 240px;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 240px;
         }
         
         .sidebar .nav-link {
