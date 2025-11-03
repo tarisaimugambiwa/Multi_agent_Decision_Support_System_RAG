@@ -21,4 +21,5 @@ urlpatterns = [
     path('ajax/quick-triage/', 
          views.quick_triage_ajax, 
          name='quick_triage_ajax'),
+    path('api/search-patients/', views.search_patients, name='search_patients'),
 ]

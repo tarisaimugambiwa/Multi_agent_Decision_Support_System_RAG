@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card">
+        <div class="card-header">
+            <h5>Patient Search</h5>
+        </div>
+        <div class="card-body">
+            <!-- Search Form -->
+            <div class="row">
+                <div class="col-md-8 mx-auto">
+                    <div class="input-group mb-3">
+                        <input type="text" id="patient-search" class="form-control" 
+                               placeholder="Search by name, ID, or phone number..." />
+                        <button class="btn btn-primary" id="search-btn">
+                            Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div id="search-results" style="display:none;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body"></tbody>
+                </table>
+            </div>
+
+            <!-- No Results Message -->
+            <div id="no-results" style="display:none;" class="alert alert-info">
+                <span id="no-results-message"></span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('patient-search');
+    const searchBtn = document.getElementById('search-btn');
+    const resultsTable = document.getElementById('search-results');
+    const resultsBody = document.getElementById('results-body');
+    const noResults = document.getElementById('no-results');
+    const noResultsMessage = document.getElementById('no-results-message');
+
+    async function searchPatients() {
+        const query = searchInput.value.trim();
+        
+        if (query.length < 2) {
+            noResultsMessage.textContent = 'Please enter at least 2 characters';
+            noResults.style.display = 'block';
+            resultsTable.style.display = 'none';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/diagnoses/api/search-patients/?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            
+            resultsBody.innerHTML = '';
+            
+            if (data.results && data.results.length > 0) {
+                resultsTable.style.display = 'block';
+                noResults.style.display = 'none';
+                
+                data.results.forEach(patient => {
+                    resultsBody.innerHTML += `
+                        <tr>
+                            <td>${patient.patient_id}</td>
+                            <td>${patient.name}</td>
+                            <td>${patient.phone}</td>
+                            <td>
+                                <a href="{% url 'patients:patient_detail' 0 %}".replace('0', patient.id) 
+                                   class="btn btn-sm btn-primary">
+                                    View Records
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                noResultsMessage.textContent = data.message || `No patients found matching "${query}"`;
+                noResults.style.display = 'block';
+                resultsTable.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Search failed:', error);
+            noResultsMessage.textContent = 'An error occurred while searching';
+            noResults.style.display = 'block';
+            resultsTable.style.display = 'none';
+        }
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', searchPatients);
+    
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchPatients();
+        }
+    });
+    
+    // Debounced search
+    let timeout = null;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timeout);
+        timeout = setTimeout(searchPatients, 300);
+    });
+});
+</script>
+{% endblock %}

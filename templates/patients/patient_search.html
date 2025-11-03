@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card">
+        <div class="card-header">
+            <h5>Patient Search</h5>
+        </div>
+        <div class="card-body">
+            <div class="input-group mb-3">
+                <input type="text" 
+                       id="patient-search" 
+                       class="form-control" 
+                       placeholder="Search by name, ID or phone number..."
+                       autocomplete="off">
+                <button class="btn btn-primary" type="button" id="search-btn">
+                    Search
+                </button>
+            </div>
+
+            <div id="results-area">
+                <!-- Results will be displayed here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('patient-search');
+    const searchBtn = document.getElementById('search-btn');
+    const resultsArea = document.getElementById('results-area');
+
+    async function searchPatients() {
+        const query = searchInput.value.trim();
+        
+        if (query.length < 2) {
+            resultsArea.innerHTML = '<div class="alert alert-info">Please enter at least 2 characters</div>';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/patients/api/search/?q=${encodeURIComponent(query)}`);
+            console.log('Search URL:', response.url); // Debug log
+            
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            console.log('Search results:', data); // Debug log
+            
+            if (data.results && data.results.length > 0) {
+                let html = '<table class="table"><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Actions</th></tr></thead><tbody>';
+                
+                data.results.forEach(patient => {
+                    // Validate patient ID exists and is not zero
+                    if (patient && patient.id && parseInt(patient.id) > 0) {
+                        // Construct URL using string template
+                        const detailUrl = `/patients/${patient.id}/`;
+                        console.log('Detail URL for patient:', detailUrl); // Debug log
+                        
+                        html += `
+                            <tr>
+                                <td>${patient.patient_id || '-'}</td>
+                                <td>${patient.name || '-'}</td>
+                                <td>${patient.phone || '-'}</td>
+                                <td>
+                                    <a href="${detailUrl}" 
+                                       class="btn btn-sm btn-primary"
+                                       data-patient-id="${patient.id}">
+                                        View Records
+                                    </a>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+                
+                html += '</tbody></table>';
+                resultsArea.innerHTML = html;
+            } else {
+                resultsArea.innerHTML = `<div class="alert alert-info">No patients found matching "${query}"</div>`;
+            }
+        } catch (error) {
+            console.error('Search failed:', error);
+            resultsArea.innerHTML = '<div class="alert alert-danger">An error occurred while searching</div>';
+        }
+    }
+
+    searchBtn.addEventListener('click', searchPatients);
+    
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchPatients();
+        }
+    });
+    
+    // Debounced search
+    let timeout = null;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timeout);
+        timeout = setTimeout(searchPatients, 300);
+    });
+});
+</script>
+{% endblock %}

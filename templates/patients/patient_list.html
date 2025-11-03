@@ -139,30 +139,38 @@
 
     <!-- Search Box -->
     <div class="search-box">
-        <form method="get" action="{% url 'patients:patient_search' %}">
-            <div class="row align-items-end">
-                <div class="col-md-10">
-                    <label class="form-label fw-bold">
-                        <i class="fas fa-search me-2"></i>Search Patients
-                    </label>
-                    <input type="text" 
-                           name="q" 
-                           class="form-control" 
-                           placeholder="Search by name, phone number, or medical record..." 
-                           value="{{ request.GET.q }}">
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-search me-2"></i>Search
-                    </button>
-                </div>
+        <div class="row align-items-end">
+            <div class="col-md-10">
+                <label class="form-label fw-bold">
+                    <i class="fas fa-search me-2"></i>Search Patients
+                </label>
+                <input type="text" 
+                       id="patient-search-input" 
+                       class="form-control" 
+                       placeholder="Search by name, phone number, or medical record..." 
+                       autocomplete="off">
             </div>
-        </form>
+            <div class="col-md-2">
+                <button type="button" id="search-btn" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-2"></i>Search
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results Area -->
+    <div id="search-results-area" style="display:none;">
+        <div class="mb-3">
+            <button type="button" id="clear-search-btn" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-times me-2"></i>Clear Search
+            </button>
+        </div>
+        <div id="search-results-container"></div>
     </div>
 
     <!-- Patient Count -->
     {% if object_list %}
-    <div class="mb-3">
+    <div class="mb-3" id="patient-count">
         <p class="text-muted">
             <i class="fas fa-info-circle me-2"></i>
             Showing <strong>{{ object_list|length }}</strong> patient(s)
@@ -171,6 +179,7 @@
     {% endif %}
 
     <!-- Patient List -->
+    <div id="patient-list-container">
     {% if object_list %}
         {% for patient in object_list %}
         <div class="patient-card">
@@ -249,5 +258,137 @@
             </a>
         </div>
     {% endif %}
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('patient-search-input');
+    const searchBtn = document.getElementById('search-btn');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    const searchResultsArea = document.getElementById('search-results-area');
+    const searchResultsContainer = document.getElementById('search-results-container');
+    const patientListContainer = document.getElementById('patient-list-container');
+    const patientCount = document.getElementById('patient-count');
+
+    async function searchPatients() {
+        const query = searchInput.value.trim();
+        
+        if (query.length < 2) {
+            searchResultsContainer.innerHTML = '<div class="alert alert-info">Please enter at least 2 characters</div>';
+            searchResultsArea.style.display = 'block';
+            patientListContainer.style.display = 'none';
+            if (patientCount) patientCount.style.display = 'none';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/patients/api/search/?q=${encodeURIComponent(query)}`);
+            console.log('Search URL:', response.url); // Debug log
+            
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            console.log('Search results:', data); // Debug log
+            
+            if (data.results && data.results.length > 0) {
+                let html = '';
+                
+                data.results.forEach(patient => {
+                    // Validate patient ID exists and is not zero
+                    if (patient && patient.id && parseInt(patient.id) > 0) {
+                        const detailUrl = `/patients/${patient.id}/`;
+                        console.log('Detail URL for patient:', detailUrl); // Debug log
+                        
+                        html += `
+                            <div class="patient-card">
+                                <div class="row align-items-center">
+                                    <div class="col-md-1 text-center">
+                                        <div class="patient-avatar">
+                                            ${patient.name.split(' ')[0].charAt(0)}${patient.name.split(' ')[1] ? patient.name.split(' ')[1].charAt(0) : ''}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-7">
+                                        <div class="patient-name">
+                                            ${patient.name}
+                                        </div>
+                                        <div class="patient-info">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <i class="fas fa-id-card"></i>
+                                                    <strong>ID:</strong> ${patient.patient_id || '-'}
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <i class="fas fa-phone"></i>
+                                                    <strong>Phone:</strong> ${patient.phone || '-'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4 text-end">
+                                        <a href="${detailUrl}" 
+                                           class="btn btn-view-patient"
+                                           data-patient-id="${patient.id}">
+                                            <i class="fas fa-eye me-2"></i>View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                searchResultsContainer.innerHTML = html;
+                searchResultsArea.style.display = 'block';
+                patientListContainer.style.display = 'none';
+                if (patientCount) patientCount.style.display = 'none';
+            } else {
+                searchResultsContainer.innerHTML = `<div class="alert alert-info">No patients found matching "${query}"</div>`;
+                searchResultsArea.style.display = 'block';
+                patientListContainer.style.display = 'none';
+                if (patientCount) patientCount.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Search failed:', error);
+            searchResultsContainer.innerHTML = '<div class="alert alert-danger">An error occurred while searching. Please try again.</div>';
+            searchResultsArea.style.display = 'block';
+            patientListContainer.style.display = 'none';
+            if (patientCount) patientCount.style.display = 'none';
+        }
+    }
+
+    function clearSearch() {
+        searchInput.value = '';
+        searchResultsArea.style.display = 'none';
+        patientListContainer.style.display = 'block';
+        if (patientCount) patientCount.style.display = 'block';
+        searchResultsContainer.innerHTML = '';
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', searchPatients);
+    clearSearchBtn.addEventListener('click', clearSearch);
+    
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchPatients();
+        }
+    });
+    
+    // Debounced search as user types
+    let timeout = null;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timeout);
+        if (searchInput.value.trim().length === 0) {
+            clearSearch();
+        } else if (searchInput.value.trim().length >= 2) {
+            timeout = setTimeout(searchPatients, 300);
+        }
+    });
+});
+</script>
 {% endblock %}

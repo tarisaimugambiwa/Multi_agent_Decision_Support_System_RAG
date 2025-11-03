@@ -214,10 +214,7 @@ urlpatterns = [
     path("doctor-dashboard/", doctor_dashboard, name="doctor_dashboard"),
     
     # Patients app URLs
-    path("patients/", include([
-        # Patient management
-        path("", include('patients.urls', namespace='patients')),
-    ])),
+    path("patients/", include('patients.urls', namespace='patients')),
     
     # Users app URLs
     path("users/", include([

@@ -2,6 +2,7 @@ import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import CreateView, ListView, DetailView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.http import JsonResponse
@@ -9,6 +10,7 @@ from django.utils import timezone
 from django.forms import ModelForm
 from django import forms
 from django.db import models
+from django.db.models import Q
 
 from .models import Case
 from .ai_utils import get_ai_diagnosis, analyze_case_urgency
@@ -694,3 +696,36 @@ def case_detail_view(request, pk):
     }
     
     return render(request, 'case_detail.html', context)
+
+
+@login_required
+def search_patients(request):
+    query = request.GET.get('q', '').strip()
+    print(f"Search query: {query}")  # Debug log
+    
+    if len(query) < 2:
+        return JsonResponse({
+            'results': [],
+            'message': 'Please enter at least 2 characters'
+        })
+    
+    patients = Patient.objects.filter(
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query) |
+        Q(patient_id__icontains=query) |
+        Q(phone_number__icontains=query)
+    )[:10]
+    
+    print(f"Found {patients.count()} matches")  # Debug log
+    
+    results = [{
+        'id': patient.id,
+        'patient_id': patient.patient_id,
+        'name': f"{patient.first_name} {patient.last_name}",
+        'phone': patient.phone_number
+    } for patient in patients]
+    
+    return JsonResponse({
+        'results': results,
+        'message': '' if results else f'No patients found matching "{query}"'
+    })

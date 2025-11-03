@@ -118,27 +118,22 @@ class PatientDetailView(LoginRequiredMixin, DetailView):
     model = Patient
     template_name = 'patients/patient_detail.html'
     context_object_name = 'patient'
-    
+
+    def get_object(self, queryset=None):
+        pk = self.kwargs.get('pk')
+        print(f"Looking for patient with ID: {pk}")  # Debug log
+        patient = get_object_or_404(Patient, pk=pk)
+        print(f"Found patient: {patient.first_name} {patient.last_name}")  # Debug log
+        return patient
+
     def get_context_data(self, **kwargs):
-        """
-        Add medical records and cases to the context.
-        """
         context = super().get_context_data(**kwargs)
-        patient = self.object
-        
-        # Get medical records for this patient
-        context['medical_records'] = patient.medical_records.all().order_by('-visit_date')[:10]
-        
-        # Get diagnostic cases for this patient
-        context['cases'] = patient.cases.all().order_by('-created_at')[:5]
-        
-        # Patient statistics
-        context['total_visits'] = patient.medical_records.count()
-        context['total_cases'] = patient.cases.count()
-        context['recent_visits'] = patient.medical_records.filter(
-            visit_date__gte=timezone.now() - timedelta(days=30)
-        ).count()
-        
+        # Use the correct related_name 'medical_records' instead of 'medicalrecord_set'
+        context['medical_records'] = self.object.medical_records.all().order_by('-visit_date')
+        # Add patient's cases
+        context['cases'] = self.object.cases.all().order_by('-created_at')
+        # Add patient age
+        context['patient_age'] = self.object.get_age()
         return context
 
 
@@ -476,32 +471,43 @@ class MedicalRecordDetailView(LoginRequiredMixin, DetailView):
 
 def patient_search_api(request):
     """
-    AJAX API endpoint for patient search autocomplete.
+    AJAX API endpoint for patient search with filters
     """
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
+    query = request.GET.get('q', '').strip()
+    print(f"Search query: {query}")  # Debug log
     
-    query = request.GET.get('q', '')
     if len(query) < 2:
-        return JsonResponse({'patients': []})
-    
+        return JsonResponse({
+            'results': [],
+            'message': 'Please enter at least 2 characters'
+        })
+
+    # Get patients matching the query
     patients = Patient.objects.filter(
         Q(first_name__icontains=query) |
         Q(last_name__icontains=query) |
-        Q(phone_number__icontains=query)
-    )[:10]
-    
-    patient_data = []
+        Q(phone_number__icontains=query) |
+        Q(address__icontains=query)
+    ).order_by('last_name', 'first_name')[:10]
+
+    # Debug logging
+    print(f"Found {patients.count()} matching patients")
+
+    results = []
     for patient in patients:
-        patient_data.append({
-            'id': patient.id,
-            'name': patient.full_name,
-            'age': patient.get_age(),
-            'phone': patient.phone_number,
-            'gender': patient.get_gender_display()
-        })
-    
-    return JsonResponse({'patients': patient_data})
+        print(f"Processing patient: ID={patient.id}, Name={patient.first_name} {patient.last_name}")
+        if patient.id:  # Ensure we have a valid ID
+            results.append({
+                'id': patient.id,
+                'patient_id': f"P{str(patient.id).zfill(4)}",  # Generate patient ID from database ID
+                'name': f"{patient.first_name} {patient.last_name}",
+                'phone': patient.phone_number or '-'
+            })
+
+    return JsonResponse({
+        'results': results,
+        'message': '' if results else f'No patients found matching "{query}"'
+    })
 
 
 def dashboard_stats_api(request):
@@ -544,120 +550,6 @@ def dashboard_stats_api(request):
     })
     
     return JsonResponse(stats)
-
-
-def patient_search_api(request):
-    """
-    AJAX API endpoint for patient search with filters
-    """
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-    
-    try:
-        query = request.GET.get('query', '').strip()
-        gender = request.GET.get('gender', '')
-        age_range = request.GET.get('age', '')
-        insurance_status = request.GET.get('insurance', '')
-        
-        # Start with all patients - only fetch fields we need for better performance
-        patients_qs = Patient.objects.only(
-            'id', 'first_name', 'last_name', 'phone_number', 
-            'gender', 'date_of_birth'
-        )
-        
-        # Apply search query - more flexible search
-        if query:
-            # Remove common formatting from phone numbers
-            phone_query = query.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
-            
-            patients_qs = patients_qs.filter(
-                Q(first_name__icontains=query) |
-                Q(last_name__icontains=query) |
-                Q(phone_number__icontains=query) |
-                Q(phone_number__icontains=phone_query) |  # Search without formatting
-                Q(id__icontains=query)
-            ).distinct()
-        
-        # Apply gender filter
-        if gender:
-            patients_qs = patients_qs.filter(gender=gender)
-        
-        # Apply age range filter
-        if age_range:
-            today = timezone.now().date()
-            if age_range == '0-18':
-                min_birth_date = today - timedelta(days=18*365)
-                patients_qs = patients_qs.filter(date_of_birth__gte=min_birth_date)
-            elif age_range == '19-35':
-                min_birth_date = today - timedelta(days=35*365)
-                max_birth_date = today - timedelta(days=19*365)
-                patients_qs = patients_qs.filter(
-                    date_of_birth__gte=min_birth_date,
-                    date_of_birth__lte=max_birth_date
-                )
-            elif age_range == '36-55':
-                min_birth_date = today - timedelta(days=55*365)
-                max_birth_date = today - timedelta(days=36*365)
-                patients_qs = patients_qs.filter(
-                    date_of_birth__gte=min_birth_date,
-                    date_of_birth__lte=max_birth_date
-                )
-            elif age_range == '56+':
-                max_birth_date = today - timedelta(days=56*365)
-                patients_qs = patients_qs.filter(date_of_birth__lte=max_birth_date)
-        
-        # Apply insurance filter
-        if insurance_status == 'insured':
-            # Skip insurance filter - field not in model
-            pass
-        elif insurance_status == 'uninsured':
-            # Skip insurance filter - field not in model
-            pass
-        
-        # Limit results BEFORE annotation for better performance
-        patients_qs = patients_qs[:50]  # Limit to 50 results
-        
-        # Convert to list to evaluate the query once
-        patients_list = list(patients_qs)
-        
-        # Prepare response data - optimized for speed
-        patients_data = []
-        today = timezone.now().date()
-        
-        for patient in patients_list:
-            # Calculate age once
-            age = None
-            if patient.date_of_birth:
-                age = today.year - patient.date_of_birth.year
-                if today.month < patient.date_of_birth.month or \
-                   (today.month == patient.date_of_birth.month and today.day < patient.date_of_birth.day):
-                    age -= 1
-            
-            # Get cases count efficiently (cached if accessed before)
-            try:
-                recent_cases_count = patient.cases.count()
-            except:
-                recent_cases_count = 0
-            
-            patients_data.append({
-                'id': patient.id,
-                'first_name': patient.first_name,
-                'last_name': patient.last_name,
-                'phone_number': patient.phone_number,
-                'email': '',  # Not in model
-                'gender': patient.get_gender_display(),
-                'age': age,
-                'recent_cases_count': recent_cases_count,
-                'insurance_status': 'Unknown'  # Not in model
-            })
-        
-        return JsonResponse({
-            'patients': patients_data,
-            'total_count': len(patients_data)
-        })
-        
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
 
 
 def recent_patients_api(request):

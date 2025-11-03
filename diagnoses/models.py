@@ -2,6 +2,20 @@ from django.db import models
 from django.conf import settings
 
 
+class Patient(models.Model):
+    """Patient model representing a patient."""
+    
+    patient_id = models.CharField(max_length=50, unique=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    phone_number = models.CharField(max_length=20)
+    date_of_birth = models.DateField(null=True, blank=True)
+    # ...other fields...
+    
+    def __str__(self):
+        return f"{self.patient_id} - {self.first_name} {self.last_name}"
+
+
 class Case(models.Model):
     """Case model representing a diagnostic case for a patient."""
     

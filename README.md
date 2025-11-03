@@ -168,7 +168,32 @@ process_all_documents()
 ### Step 7: Run Development Server
 
 ```bash
-python manage.py runserver
+
+from django.db.models import Q
+from django.http import JsonResponse
+
+@login_required
+def search_patients(request):
+    query = request.GET.get('q', '')
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+    
+    patients = Patient.objects.filter(
+        Q(patient_id__icontains=query) |
+        Q(phone_number__icontains=query) |
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query)
+    )[:10]
+    
+    results = [{
+        'id': patient.id,
+        'patient_id': patient.patient_id,
+        'name': f"{patient.first_name} {patient.last_name}",
+        'phone': patient.phone_number,
+        'dob': patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else '',
+    } for patient in patients]
+    
+    return JsonResponse({'results': results})
 ```
 
 Visit http://127.0.0.1:8000/ in your browser.
