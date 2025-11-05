@@ -22,4 +22,7 @@ urlpatterns = [
          views.quick_triage_ajax, 
          name='quick_triage_ajax'),
     path('api/search-patients/', views.search_patients, name='search_patients'),
+    path('api/regenerate-diagnosis/<int:pk>/', views.regenerate_diagnosis, name='regenerate_diagnosis'),
+    path('api/doctor-review/<int:case_id>/', views.submit_doctor_review, name='submit_doctor_review'),
+     path('api/notifications/mark-read/<int:notification_id>/', views.mark_notification_read, name='mark_notification_read'),
 ]

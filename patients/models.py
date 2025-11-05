@@ -8,8 +8,6 @@ class Patient(models.Model):
     GENDER_CHOICES = [
         ('M', 'Male'),
         ('F', 'Female'),
-        ('O', 'Other'),
-        ('P', 'Prefer not to say'),
     ]
     
     first_name = models.CharField(max_length=100, help_text='Patient first name', db_index=True)

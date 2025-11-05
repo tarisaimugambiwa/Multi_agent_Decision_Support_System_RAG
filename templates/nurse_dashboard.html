@@ -375,6 +375,19 @@
         
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="stat-card">
+                <div class="stat-icon text-success">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <div class="stat-number text-success">{{ doctor_reviewed_count|default:"0" }}</div>
+                <div class="stat-label">Doctor Reviewed</div>
+                <small class="text-muted d-block mt-2">
+                    <i class="fas fa-info-circle me-1"></i>Check case details for feedback
+                </small>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
                 <div class="stat-icon text-warning">
                     <i class="fas fa-exclamation-triangle"></i>
                 </div>
@@ -386,19 +399,9 @@
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="stat-card">
                 <div class="stat-icon text-info">
-                    <i class="fas fa-hourglass-half"></i>
-                </div>
-                <div class="stat-number text-info">{{ pending_cases_count|default:"0" }}</div>
-                <div class="stat-label">Pending Review</div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="stat-card">
-                <div class="stat-icon text-success">
                     <i class="fas fa-check-circle"></i>
                 </div>
-                <div class="stat-number text-success">{{ completed_today|default:"0" }}</div>
+                <div class="stat-number text-info">{{ completed_today|default:"0" }}</div>
                 <div class="stat-label">Completed Today</div>
             </div>
         </div>
@@ -474,6 +477,7 @@
                         <th>Symptoms</th>
                         <th>Status</th>
                         <th>Priority</th>
+                        <th>Doctor Review</th>
                         <th>Created</th>
                         <th>Actions</th>
                     </tr>
@@ -508,6 +512,42 @@
                             <span class="priority-badge priority-{{ case.priority|lower }}">
                                 {{ case.get_priority_display }}
                             </span>
+                        </td>
+                        <td>
+                            {% if case.doctor_review %}
+                                <div class="text-center">
+                                    {% if case.doctor_decision == 'approved' %}
+                                        <span class="badge bg-success" title="Doctor approved the diagnosis">
+                                            <i class="fas fa-check-circle me-1"></i>Approved
+                                        </span>
+                                    {% elif case.doctor_decision == 'modified' %}
+                                        <span class="badge bg-warning" title="Doctor suggested modifications">
+                                            <i class="fas fa-edit me-1"></i>Modified
+                                        </span>
+                                    {% elif case.doctor_decision == 'rejected' %}
+                                        <span class="badge bg-danger" title="Doctor rejected the diagnosis">
+                                            <i class="fas fa-times-circle me-1"></i>Rejected
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-info" title="Doctor has reviewed">
+                                            <i class="fas fa-comment-medical me-1"></i>Reviewed
+                                        </span>
+                                    {% endif %}
+                                    <div class="mt-1">
+                                        <small class="text-muted">
+                                            {% if case.reviewed_by %}
+                                                by {{ case.reviewed_by.get_full_name|default:case.reviewed_by.username }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="text-center">
+                                    <span class="badge bg-secondary" title="Awaiting doctor review">
+                                        <i class="fas fa-clock me-1"></i>Pending
+                                    </span>
+                                </div>
+                            {% endif %}
                         </td>
                         <td>
                             <div>{{ case.created_at|date:"M d, Y" }}</div>

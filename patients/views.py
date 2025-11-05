@@ -9,9 +9,11 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+from django.db.utils import OperationalError
 
 from .models import Patient, MedicalRecord
-from diagnoses.models import Case
+from .forms import PatientForm
+from diagnoses.models import Case, Notification
 from users.models import User
 
 
@@ -83,11 +85,8 @@ class PatientCreateView(LoginRequiredMixin, CreateView):
     Class-based CreateView for adding new patients.
     """
     model = Patient
+    form_class = PatientForm
     template_name = 'patients/patient_form.html'
-    fields = [
-        'first_name', 'last_name', 'date_of_birth', 'gender',
-        'phone_number', 'address', 'medical_history', 'allergies'
-    ]
     success_url = reverse_lazy('patients:patient_list')
     
     def form_valid(self, form):
@@ -142,11 +141,8 @@ class PatientUpdateView(LoginRequiredMixin, UpdateView):
     Class-based UpdateView for editing patient information.
     """
     model = Patient
+    form_class = PatientForm
     template_name = 'patients/patient_form.html'
-    fields = [
-        'first_name', 'last_name', 'date_of_birth', 'gender',
-        'phone_number', 'address', 'medical_history', 'allergies'
-    ]
     
     def get_success_url(self):
         """
@@ -209,6 +205,12 @@ def nurse_dashboard(request):
         status__in=['PENDING', 'IN_PROGRESS', 'DOCTOR_REVIEW']
     ).count()
     
+    # Count cases that have been reviewed by a doctor
+    doctor_reviewed_count = nurse_cases.filter(
+        doctor_review__isnull=False,
+        reviewed_by__isnull=False
+    ).count()
+    
     urgent_cases_count = Case.objects.filter(
         priority__in=['URGENT', 'CRITICAL'],
         status__in=['PENDING', 'IN_PROGRESS']
@@ -230,14 +232,33 @@ def nurse_dashboard(request):
     paginator = Paginator(recent_cases, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
+    # Notifications for the nurse (unread count + recent items)
+    try:
+        unread_notifications_count = Notification.objects.filter(
+            recipient=request.user,
+            read_at__isnull=True
+        ).count()
+
+        recent_notifications = Notification.objects.filter(
+            recipient=request.user
+        ).order_by('-created_at')[:6]
+    except OperationalError as e:
+        # Database table probably doesn't exist yet (migrations pending).
+        # Fall back to safe defaults so the dashboard still loads.
+        print(f"Notification table missing or DB error: {e}")
+        unread_notifications_count = 0
+        recent_notifications = []
+
     context = {
         'recent_cases': page_obj,
         'my_cases_count': my_cases_count,
+        'doctor_reviewed_count': doctor_reviewed_count,
         'urgent_cases_count': urgent_cases_count,
         'pending_cases_count': pending_cases_count,
         'completed_today': completed_today,
         'total_patients': Patient.objects.count(),
+        'unread_notifications_count': unread_notifications_count,
+        'recent_notifications': recent_notifications,
     }
     
     return render(request, 'nurse_dashboard.html', context)
@@ -350,6 +371,25 @@ def doctor_dashboard(request):
         'recent_activities': recent_activities,
         'total_cases': Case.objects.count(),
     }
+    # Notifications for doctor (unread count + recent items)
+    try:
+        unread_notifications_count = Notification.objects.filter(
+            recipient=request.user,
+            read_at__isnull=True
+        ).count()
+
+        recent_notifications = Notification.objects.filter(
+            recipient=request.user
+        ).order_by('-created_at')[:6]
+    except Exception:
+        # If notifications table missing, fall back to defaults
+        unread_notifications_count = 0
+        recent_notifications = []
+
+    context.update({
+        'unread_notifications_count': unread_notifications_count,
+        'recent_notifications': recent_notifications,
+    })
     
     return render(request, 'doctor_dashboard.html', context)
 

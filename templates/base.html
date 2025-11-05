@@ -253,17 +253,31 @@
                             <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-bell fa-lg"></i>
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    3
+                                    {{ unread_notifications_count|default:"0" }}
                                     <span class="visually-hidden">unread notifications</span>
                                 </span>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="min-width:320px;">
                                 <li><h6 class="dropdown-header">Notifications</h6></li>
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Urgent case #123</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-user-plus text-info me-2"></i>New patient registered</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-file-medical text-success me-2"></i>Report completed</a></li>
+                                {% if recent_notifications %}
+                                    {% for note in recent_notifications %}
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-start" href="{{ note.link|default:'#' }}" data-notification-id="{{ note.id }}">
+                                                <div class="me-2">
+                                                    <i class="fas fa-circle {% if not note.is_read %}text-danger{% else %}text-secondary{% endif %}" style="font-size:8px;"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="small text-truncate" style="max-width:240px;">{{ note.verb }}</div>
+                                                    <div class="small text-muted">{{ note.created_at|timesince }} ago</div>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li><a class="dropdown-item text-muted" href="#">No notifications</a></li>
+                                {% endif %}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-center" href="#">View all notifications</a></li>
+                                <li><a class="dropdown-item text-center" href="/notifications/">View all notifications</a></li>
                             </ul>
                         </li>
                         
@@ -618,6 +632,70 @@
         
         // Initialize search when DOM is loaded
         document.addEventListener('DOMContentLoaded', initializeSearch);
+    </script>
+    
+    <!-- Notification click handler: mark notification read via AJAX then navigate -->
+    <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const notificationLinks = document.querySelectorAll('a[data-notification-id]');
+            notificationLinks.forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    const nid = this.dataset.notificationId;
+                    const href = this.getAttribute('href') || '#';
+                    // prevent immediate navigation so we can mark read first
+                    e.preventDefault();
+
+                    if (!nid) {
+                        // fallback: navigate normally
+                        window.location = href;
+                        return;
+                    }
+
+                    fetch(`/diagnoses/api/notifications/mark-read/${nid}/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({})
+                    }).then(function(resp) {
+                        return resp.json();
+                    }).then(function(data) {
+                        // decrement badge count if present
+                        try {
+                            const badge = document.querySelector('#notificationDropdown .badge');
+                            if (badge) {
+                                let v = parseInt(badge.textContent) || 0;
+                                v = Math.max(0, v - 1);
+                                badge.innerHTML = v + '<span class="visually-hidden">unread notifications</span>';
+                            }
+                        } catch (err) {
+                            // ignore
+                        }
+                        // finally navigate to the notification link
+                        window.location = href;
+                    }).catch(function() {
+                        // if marking fails, still navigate
+                        window.location = href;
+                    });
+                });
+            });
+        });
     </script>
     
     {% block extra_js %}{% endblock %}

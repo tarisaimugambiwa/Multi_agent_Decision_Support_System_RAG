@@ -304,7 +304,7 @@
                         <strong>AI Confidence Level:</strong>
                         <div class="confidence-bar">
                             <div class="confidence-fill" data-confidence="{{ ai_diagnosis_data.diagnosis.confidence|floatformat:0 }}">
-                                {% widthratio ai_diagnosis_data.diagnosis.confidence 1 100 %}% Confidence
+                                {{ ai_diagnosis_data.diagnosis.confidence|floatformat:0 }}% Confidence
                             </div>
                         </div>
                     </div>
@@ -355,13 +355,31 @@
             <div class="report-section">
                 <h3 class="section-title">
                     <i class="fas fa-notes-medical"></i>Treatment Plan & Recommendations
+                    {% if ai_diagnosis_data.treatment.knowledge_base_used %}
+                    <span class="badge bg-success ms-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-database"></i> Evidence-Based from Knowledge Base
+                    </span>
+                    {% endif %}
                 </h3>
+
+                <!-- Evidence Sources Badge -->
+                {% if ai_diagnosis_data.treatment.evidence_sources %}
+                <div class="alert alert-info mb-3" style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-left: 4px solid #2196F3;">
+                    <i class="fas fa-book-medical me-2"></i>
+                    <strong>Treatment guidelines sourced from:</strong>
+                    <ul class="mb-0 mt-2">
+                        {% for source in ai_diagnosis_data.treatment.evidence_sources %}
+                        <li>{{ source }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
 
                 <!-- Action Plan Timeline -->
                 {% if ai_diagnosis_data.treatment.immediate_actions or ai_diagnosis_data.treatment.short_term_actions or ai_diagnosis_data.treatment.follow_up_actions %}
                 <div class="action-timeline">
                     {% if ai_diagnosis_data.treatment.immediate_actions %}
-                    <h5>Immediate Actions (0-15 minutes)</h5>
+                    <h5><i class="fas fa-exclamation-circle text-danger me-2"></i>Immediate Actions (0-15 minutes)</h5>
                     {% for action in ai_diagnosis_data.treatment.immediate_actions %}
                     <div class="action-item">
                         <i class="fas fa-bolt text-danger me-2"></i>
@@ -371,10 +389,20 @@
                     {% endif %}
 
                     {% if ai_diagnosis_data.treatment.short_term_actions %}
-                    <h5 class="mt-3">Short-term Actions (Within 1-4 hours)</h5>
+                    <h5 class="mt-4"><i class="fas fa-clock text-warning me-2"></i>Short-term Actions (Within 1-4 hours)</h5>
                     {% for action in ai_diagnosis_data.treatment.short_term_actions %}
                     <div class="action-item">
-                        <i class="fas fa-clock text-warning me-2"></i>
+                        <i class="fas fa-check-circle text-warning me-2"></i>
+                        {{ action }}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+
+                    {% if ai_diagnosis_data.treatment.follow_up_actions %}
+                    <h5 class="mt-4"><i class="fas fa-calendar-check text-info me-2"></i>Follow-up Actions (3-7 days)</h5>
+                    {% for action in ai_diagnosis_data.treatment.follow_up_actions %}
+                    <div class="action-item">
+                        <i class="fas fa-arrow-right text-info me-2"></i>
                         {{ action }}
                     </div>
                     {% endfor %}
@@ -383,12 +411,33 @@
                 {% endif %}
 
                 <!-- Medications -->
-                {% if ai_diagnosis_data.treatment.medications.primary_medications or ai_diagnosis_data.treatment.medications.alternative_medications %}
+                {% if ai_diagnosis_data.treatment.medications %}
                 <div class="mt-4">
-                    <h5><i class="fas fa-pills me-2"></i>Medication Recommendations</h5>
+                    <h5><i class="fas fa-pills me-2"></i>Medication Recommendations
+                        {% if ai_diagnosis_data.treatment.medications.knowledge_base_used %}
+                        <span class="badge bg-primary ms-2" style="font-size: 0.65rem;">
+                            <i class="fas fa-book-medical"></i> From Medical Guidelines
+                        </span>
+                        {% endif %}
+                    </h5>
+
+                    <!-- Medication Evidence Sources -->
+                    {% if ai_diagnosis_data.treatment.medications.evidence_sources %}
+                    <div class="alert alert-light border-start border-primary border-3 mb-3" style="font-size: 0.9rem;">
+                        <i class="fas fa-file-medical-alt text-primary me-2"></i>
+                        <strong>Referenced from:</strong> 
+                        {% for source in ai_diagnosis_data.treatment.medications.evidence_sources %}
+                            {% if not forloop.last %}
+                                {{ source }}, 
+                            {% else %}
+                                {{ source }}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     
                     {% if ai_diagnosis_data.treatment.medications.primary_medications %}
-                    <h6 class="mt-3">Primary Medications:</h6>
+                    <h6 class="mt-3"><i class="fas fa-star text-warning me-2"></i>Primary Medications:</h6>
                     {% for med in ai_diagnosis_data.treatment.medications.primary_medications %}
                     <div class="medication-card">
                         <div class="d-flex justify-content-between align-items-start">
@@ -402,6 +451,11 @@
                                     <i class="fas fa-calendar me-1"></i><strong>Duration:</strong> {{ med.duration }}<br>
                                     <i class="fas fa-info-circle me-1"></i><strong>Instructions:</strong> {{ med.instructions }}
                                 </p>
+                                {% if med.source %}
+                                <p class="text-muted mb-1" style="font-size: 0.85rem;">
+                                    <i class="fas fa-book me-1"></i><em>Source: {{ med.source }}</em>
+                                </p>
+                                {% endif %}
                                 {% if med.contraindications %}
                                 <p class="text-danger mb-0">
                                     <i class="fas fa-exclamation-triangle me-1"></i>
@@ -415,9 +469,9 @@
                     {% endif %}
                     
                     {% if ai_diagnosis_data.treatment.medications.alternative_medications %}
-                    <h6 class="mt-3">Alternative Medications (if primary not available):</h6>
+                    <h6 class="mt-4"><i class="fas fa-exchange-alt text-info me-2"></i>Alternative Medications (if primary not available):</h6>
                     {% for med in ai_diagnosis_data.treatment.medications.alternative_medications %}
-                    <div class="medication-card">
+                    <div class="medication-card" style="background: #e1f5fe;">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="w-100">
                                 <strong class="text-info">
@@ -429,6 +483,11 @@
                                     <i class="fas fa-calendar me-1"></i><strong>Duration:</strong> {{ med.duration }}<br>
                                     <i class="fas fa-info-circle me-1"></i><strong>Instructions:</strong> {{ med.instructions }}
                                 </p>
+                                {% if med.source %}
+                                <p class="text-muted mb-1" style="font-size: 0.85rem;">
+                                    <i class="fas fa-book me-1"></i><em>Source: {{ med.source }}</em>
+                                </p>
+                                {% endif %}
                                 {% if med.contraindications %}
                                 <p class="text-danger mb-0">
                                     <i class="fas fa-exclamation-triangle me-1"></i>
@@ -440,6 +499,50 @@
                     </div>
                     {% endfor %}
                     {% endif %}
+                    
+                    <!-- Show message if no medications available -->
+                    {% if not ai_diagnosis_data.treatment.medications.primary_medications and not ai_diagnosis_data.treatment.medications.alternative_medications %}
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Medication recommendations are being generated from medical knowledge base. 
+                        Please consult with a healthcare provider for specific medication prescriptions based on patient condition and history.
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="mt-4">
+                    <h5><i class="fas fa-pills me-2"></i>Medication Recommendations</h5>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Medication data not available. Please regenerate the diagnosis or consult with a healthcare provider.
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Treatment Warnings -->
+                {% if ai_diagnosis_data.treatment.warnings %}
+                <div class="mt-4">
+                    <h5><i class="fas fa-exclamation-triangle text-danger me-2"></i>Important Warnings</h5>
+                    {% for warning in ai_diagnosis_data.treatment.warnings %}
+                    <div class="red-flag">
+                        <i class="fas fa-shield-alt me-2"></i>{{ warning }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Success Criteria -->
+                {% if ai_diagnosis_data.treatment.success_criteria %}
+                <div class="mt-4">
+                    <h5><i class="fas fa-clipboard-check text-success me-2"></i>Treatment Success Indicators</h5>
+                    <div class="alert alert-success" style="background: #e8f5e9; border-left: 4px solid #4caf50;">
+                        <p class="mb-0"><strong>Look for these signs of improvement:</strong></p>
+                        <ul class="mt-2 mb-0">
+                            {% for criteria in ai_diagnosis_data.treatment.success_criteria %}
+                            <li>{{ criteria }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
                 </div>
                 {% endif %}
 
@@ -497,8 +600,8 @@
                 <p><strong>Last Updated:</strong> {{ case.updated_at|date:"M d, Y g:i A" }}</p>
             </div>
 
-            <!-- Routing Decision -->
-            {% if ai_diagnosis_data.routing %}
+            <!-- Routing Decision (Doctor Only) -->
+            {% if ai_diagnosis_data.routing and user.role == 'DOCTOR' %}
             <div class="report-section">
                 <h5 class="section-title">
                     <i class="fas fa-route"></i>AI Routing
@@ -529,11 +632,128 @@
                         <i class="fas fa-clipboard-check me-2"></i>Review Case
                     </a>
                     {% endif %}
+                    <button onclick="regenerateDiagnosis()" class="btn btn-warning" id="regenerate-btn">
+                        <i class="fas fa-sync-alt me-2"></i>Regenerate Diagnosis
+                    </button>
                     <button onclick="window.print()" class="btn btn-success">
                         <i class="fas fa-print me-2"></i>Print Report
                     </button>
                 </div>
             </div>
+
+            <!-- Doctor's Comments Section -->
+            {% if user.role == 'DOCTOR' %}
+            <div class="report-section">
+                <h5 class="section-title">
+                    <i class="fas fa-comments-medical"></i>Doctor's Review & Comments
+                </h5>
+                
+                <!-- Existing Doctor Review (if any) -->
+                {% if case.doctor_review %}
+                <div class="alert alert-info mb-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-2"><i class="fas fa-user-md me-2"></i>Previous Review</h6>
+                            <p class="mb-1" style="white-space: pre-wrap;">{{ case.doctor_review }}</p>
+                            {% if case.reviewed_by %}
+                            <small class="text-muted">
+                                <i class="fas fa-user me-1"></i>{{ case.reviewed_by.get_full_name }}
+                                {% if case.reviewed_at %}
+                                | <i class="fas fa-clock me-1"></i>{{ case.reviewed_at|date:"M d, Y g:i A" }}
+                                {% endif %}
+                            </small>
+                            {% endif %}
+                        </div>
+                        <span class="badge bg-primary">
+                            {% if case.doctor_decision == 'approved' %}
+                                <i class="fas fa-check"></i> Approved
+                            {% elif case.doctor_decision == 'modified' %}
+                                <i class="fas fa-edit"></i> Modified
+                            {% elif case.doctor_decision == 'rejected' %}
+                                <i class="fas fa-times"></i> Rejected
+                            {% else %}
+                                <i class="fas fa-eye"></i> Reviewed
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Add/Update Comment Form -->
+                <form id="doctorCommentForm" onsubmit="submitDoctorComment(event)">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="doctorComment" class="form-label">
+                            <strong>{% if case.doctor_review %}Update Review{% else %}Add Review{% endif %}</strong>
+                        </label>
+                        <textarea 
+                            class="form-control" 
+                            id="doctorComment" 
+                            name="doctor_review" 
+                            rows="5" 
+                            placeholder="Enter your review, comments, or recommendations here...">{{ case.doctor_review }}</textarea>
+                        <div class="form-text">
+                            Share your expert opinion on the AI diagnosis, suggest modifications, or provide additional guidance.
+                        </div>
+                    </div>
+
+                    <!-- Decision Selection -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Your Decision:</strong></label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="doctor_decision" id="decision_approved" value="approved" {% if case.doctor_decision == 'approved' %}checked{% endif %}>
+                            <label class="btn btn-outline-success" for="decision_approved">
+                                <i class="fas fa-check me-1"></i>Approve AI Diagnosis
+                            </label>
+
+                            <input type="radio" class="btn-check" name="doctor_decision" id="decision_modified" value="modified" {% if case.doctor_decision == 'modified' %}checked{% endif %}>
+                            <label class="btn btn-outline-warning" for="decision_modified">
+                                <i class="fas fa-edit me-1"></i>Needs Modification
+                            </label>
+
+                            <input type="radio" class="btn-check" name="doctor_decision" id="decision_rejected" value="rejected" {% if case.doctor_decision == 'rejected' %}checked{% endif %}>
+                            <label class="btn btn-outline-danger" for="decision_rejected">
+                                <i class="fas fa-times me-1"></i>Reject & Revise
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100" id="submitCommentBtn">
+                        <i class="fas fa-save me-2"></i>{% if case.doctor_review %}Update Review{% else %}Submit Review{% endif %}
+                    </button>
+                </form>
+            </div>
+            {% elif user.role == 'NURSE' and case.doctor_review %}
+            <!-- Nurses can view doctor's comments but not edit -->
+            <div class="report-section">
+                <h5 class="section-title">
+                    <i class="fas fa-comments-medical"></i>Doctor's Review
+                </h5>
+                <div class="alert alert-info">
+                    <h6 class="mb-2"><i class="fas fa-user-md me-2"></i>Doctor's Comments</h6>
+                    <p class="mb-2" style="white-space: pre-wrap;">{{ case.doctor_review }}</p>
+                    {% if case.reviewed_by %}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>{{ case.reviewed_by.get_full_name }}
+                            {% if case.reviewed_at %}
+                            | <i class="fas fa-clock me-1"></i>{{ case.reviewed_at|date:"M d, Y g:i A" }}
+                            {% endif %}
+                        </small>
+                        <span class="badge bg-primary">
+                            {% if case.doctor_decision == 'approved' %}
+                                <i class="fas fa-check"></i> Approved
+                            {% elif case.doctor_decision == 'modified' %}
+                                <i class="fas fa-edit"></i> Needs Modification
+                            {% elif case.doctor_decision == 'rejected' %}
+                                <i class="fas fa-times"></i> Rejected
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
 
             <!-- AI System Info -->
             <div class="report-section">
@@ -562,5 +782,112 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 100);
     }
 });
+
+// Regenerate diagnosis function
+async function regenerateDiagnosis() {
+    const btn = document.getElementById('regenerate-btn');
+    const originalText = btn.innerHTML;
+    
+    // Confirm action
+    if (!confirm('Are you sure you want to regenerate the AI diagnosis? This will replace the current diagnosis with a new analysis.')) {
+        return;
+    }
+    
+    // Disable button and show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Regenerating...';
+    
+    try {
+        const response = await fetch(`/diagnoses/api/regenerate-diagnosis/{{ case.id }}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show success message
+            alert('Diagnosis regenerated successfully! The page will reload to show the updated diagnosis.');
+            // Reload page to show new diagnosis
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to regenerate diagnosis'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('Error regenerating diagnosis:', error);
+        alert('An error occurred while regenerating the diagnosis. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+// Submit doctor's comment function
+async function submitDoctorComment(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('doctorCommentForm');
+    const btn = document.getElementById('submitCommentBtn');
+    const originalText = btn.innerHTML;
+    
+    const comment = document.getElementById('doctorComment').value.trim();
+    const decision = document.querySelector('input[name="doctor_decision"]:checked')?.value;
+    
+    if (!comment) {
+        alert('Please enter your review comments before submitting.');
+        return;
+    }
+    
+    if (!decision) {
+        alert('Please select a decision (Approve, Modify, or Reject) before submitting.');
+        return;
+    }
+    
+    // Disable button and show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+    
+    try {
+        const response = await fetch(`/diagnoses/api/doctor-review/{{ case.id }}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                doctor_review: comment,
+                doctor_decision: decision
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('Review submitted successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to submit review'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('Error submitting review:', error);
+        alert('An error occurred while submitting your review. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
 </script>
 {% endblock %}

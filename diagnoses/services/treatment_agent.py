@@ -212,50 +212,62 @@ class TreatmentAgent:
     def _extract_medications_from_guidelines(self, guidelines: Dict) -> List[Dict]:
         """
         Extract medication recommendations from RAG results.
-        Returns actual medication information from knowledge base.
+        Returns clean, actionable medication information.
         """
         medications = []
         
+        # Common medication keywords to look for
+        medication_keywords = [
+            'paracetamol', 'acetaminophen', 'ibuprofen', 'aspirin',
+            'amoxicillin', 'antibiotics', 'antibiotic', 'penicillin',
+            'metformin', 'insulin', 'lisinopril', 'amlodipine',
+            'omeprazole', 'ranitidine', 'salbutamol', 'inhaler',
+            'diazepam', 'lorazepam', 'sertraline', 'fluoxetine'
+        ]
+        
         # Parse guidelines for medication mentions
         for guideline in guidelines.get('guidelines', []):
-            content = guideline.get('content', '')
+            content = guideline.get('content', '').lower()
             source = guideline.get('source', 'Unknown')
             
             if not content:
                 continue
             
-            # Extract sentences that mention medications
-            sentences = [s.strip() for s in content.split('.') if s.strip()]
-            
-            for sentence in sentences:
-                sentence_lower = sentence.lower()
-                
-                # Look for medication-related keywords
-                if any(keyword in sentence_lower for keyword in [
-                    'medication', 'drug', 'medicine', 'administer', 'prescribe',
-                    'tablet', 'capsule', 'injection', 'dose', 'mg', 'ml',
-                    'treatment includes', 'give', 'oral', 'intravenous'
-                ]):
-                    # Extract the full sentence as medication guidance
-                    medications.append({
-                        'name': sentence,  # Store the full guidance
-                        'dosage': 'As specified in medical guidelines',
-                        'duration': 'Per treatment protocol',
-                        'instructions': f'Source: {source}',
-                        'source': source
-                    })
+            # Look for specific medications mentioned
+            for med_name in medication_keywords:
+                if med_name in content:
+                    # Extract context around the medication
+                    sentences = content.split('.')
+                    for sentence in sentences:
+                        if med_name in sentence and len(sentence) < 200:
+                            medications.append({
+                                'name': med_name.title(),
+                                'dosage': 'As per clinical guidelines',
+                                'duration': 'As prescribed by healthcare provider',
+                                'instructions': 'Follow healthcare provider instructions. Take as directed.',
+                                'source': source
+                            })
+                            break
+        
+        # Remove duplicates
+        seen_names = set()
+        unique_meds = []
+        for med in medications:
+            if med['name'] not in seen_names:
+                seen_names.add(med['name'])
+                unique_meds.append(med)
         
         # If medications found in knowledge base, use them
-        if medications:
-            return medications[:5]  # Return top 5 medication recommendations
+        if unique_meds:
+            return unique_meds[:3]  # Return top 3 medication recommendations
         
-        # Fallback: Return condition-specific guidance
+        # Fallback: Return general guidance
         return [{
-            'name': 'Medication recommendations available in knowledge base',
-            'dosage': 'Per clinical guidelines',
-            'duration': 'As prescribed by healthcare provider',
-            'instructions': 'Consult full medical guidelines for specific medication protocols, dosages, and contraindications based on patient condition and history.',
-            'source': 'WHO Essential Medicines List and Treatment Guidelines'
+            'name': 'Consult Healthcare Provider for Specific Medications',
+            'dosage': 'To be determined by healthcare provider',
+            'duration': 'As prescribed',
+            'instructions': 'A healthcare provider will prescribe appropriate medications based on your specific condition, medical history, and current symptoms.',
+            'source': 'Clinical Guidelines'
         }]
     
     def _generate_action_steps_from_guidelines(
@@ -265,77 +277,105 @@ class TreatmentAgent:
         diagnosis: Dict
     ) -> Dict[str, List[str]]:
         """
-        Generate action steps based on retrieved treatment guidelines.
+        Generate clean, actionable steps based on urgency level and diagnosis.
+        Keep it simple and practical for nurses and healthcare workers.
         """
         immediate = []
         short_term = []
         follow_up = []
         
-        # Extract detailed recommendations from guidelines
-        if guidelines.get('guidelines'):
-            for guideline in guidelines['guidelines']:  # Use all available guidelines
-                content = guideline.get('content', '').strip()
-                source = guideline.get('source', 'medical literature')
-                
-                if not content:
-                    continue
-                
-                # Extract actionable information from the guideline content
-                # Split content into sentences for better parsing
-                sentences = [s.strip() for s in content.split('.') if s.strip()]
-                
-                for sentence in sentences[:5]:  # Use first 5 sentences of each guideline
-                    sentence_lower = sentence.lower()
-                    
-                    # Categorize based on keywords and urgency
-                    if any(word in sentence_lower for word in ['immediate', 'urgent', 'emergency', 'critical', 'now', 'immediately']):
-                        if urgency_level in ['CRITICAL', 'HIGH'] and sentence not in immediate:
-                            immediate.append(f"{sentence}")
-                    
-                    elif any(word in sentence_lower for word in ['administer', 'give', 'provide', 'treat', 'medication', 'drug', 'therapy']):
-                        if sentence not in short_term:
-                            short_term.append(f"{sentence}")
-                    
-                    elif any(word in sentence_lower for word in ['monitor', 'observe', 'follow-up', 'reassess', 'review', 'track']):
-                        if sentence not in follow_up:
-                            follow_up.append(f"{sentence}")
-                    
-                    # If sentence has treatment info but doesn't match above, add to short-term
-                    elif any(word in sentence_lower for word in ['treatment', 'manage', 'care', 'intervention']) and sentence not in short_term:
-                        short_term.append(f"{sentence}")
+        primary_diagnosis = diagnosis.get('primary_diagnosis', '').lower()
         
-        # Add standard emergency steps based on urgency
-        if urgency_level == 'CRITICAL':
-            immediate.insert(0, '🚨 CALL EMERGENCY SERVICES IMMEDIATELY OR GO TO NEAREST EMERGENCY DEPARTMENT')
-            immediate.insert(1, 'Monitor vital signs continuously (blood pressure, heart rate, breathing)')
-            immediate.insert(2, 'Keep patient calm and in a comfortable position')
-            if not any('oxygen' in action.lower() for action in immediate):
-                immediate.append('Prepare to administer oxygen if available')
-        elif urgency_level == 'HIGH':
-            immediate.insert(0, '⚠️ Seek urgent medical evaluation within 2-4 hours')
-            immediate.append('Monitor symptoms closely and document any changes')
-            immediate.append('Have patient rest and avoid strenuous activity')
-        else:
-            immediate.append('Schedule medical consultation within 24-48 hours')
-            immediate.append('Monitor symptoms and document progression')
-        
-        # Add standard short-term actions if none from guidelines
-        if not short_term:
-            short_term.append('Follow treatment plan as prescribed by healthcare provider')
-            short_term.append('Take all medications as directed (complete full course)')
-            short_term.append('Maintain adequate hydration and nutrition')
-            short_term.append('Get adequate rest to support recovery')
-        
-        # Add standard follow-up if none from guidelines
-        if not follow_up:
-            follow_up.append('Schedule follow-up appointment in 3-7 days or as directed')
-            follow_up.append('Report immediately if symptoms worsen or new symptoms develop')
-            follow_up.append('Keep a symptom diary to track progress')
-            follow_up.append('Return to emergency department if condition deteriorates')
+        # Generate standard clinical actions based on urgency
+        if urgency_level.upper() == 'CRITICAL':
+            immediate = [
+                '🚨 CALL EMERGENCY SERVICES IMMEDIATELY OR TRANSPORT TO EMERGENCY DEPARTMENT',
+                'Monitor vital signs continuously (blood pressure, heart rate, respiratory rate, oxygen saturation)',
+                'Keep patient calm, reassure them, and position comfortably',
+                'Ensure airway is clear and patient is breathing adequately',
+                'Do not give anything by mouth until evaluated by physician',
+                'Have patient\'s medical history and current medications ready for emergency team'
+            ]
+            short_term = [
+                'Prepare for immediate hospital admission and emergency treatment',
+                'Emergency physician will order diagnostic tests and imaging as needed',
+                'IV access and emergency medications will be administered as needed',
+                'Continuous monitoring in emergency department or ICU'
+            ]
+            follow_up = [
+                'Follow all discharge instructions from emergency department',
+                'Attend all follow-up appointments as scheduled',
+                'Watch for warning signs and return immediately if condition worsens'
+            ]
+            
+        elif urgency_level.upper() == 'HIGH':
+            immediate = [
+                '⚠️ Seek urgent medical evaluation within 2-4 hours at urgent care or emergency department',
+                'Monitor vital signs: temperature, blood pressure, heart rate, respiratory rate',
+                'Document all symptoms, their severity, and any changes',
+                'Have patient rest and avoid strenuous physical activity',
+                'Keep patient hydrated with water or clear fluids',
+                'Gather medical records and list of current medications'
+            ]
+            short_term = [
+                'Healthcare provider will conduct physical examination and diagnostic tests',
+                'Treatment plan will be prescribed based on clinical findings',
+                'Follow all medication instructions precisely as prescribed',
+                'Monitor for side effects and report any concerns to healthcare provider',
+                'Maintain adequate rest, hydration, and nutrition'
+            ]
+            follow_up = [
+                'Schedule follow-up appointment within 3-5 days or as directed by physician',
+                'Report immediately if symptoms worsen or new symptoms develop',
+                'Keep symptom diary noting changes, severity, and timing',
+                'Complete all prescribed medications even if feeling better'
+            ]
+            
+        elif urgency_level.upper() == 'MODERATE':
+            immediate = [
+                'Schedule medical consultation within 24-48 hours',
+                'Monitor symptoms and note any changes or progression',
+                'Maintain normal hydration - drink adequate fluids',
+                'Get adequate rest to support body\'s healing process',
+                'Take over-the-counter pain relief if needed (as per package directions)'
+            ]
+            short_term = [
+                'Healthcare provider will evaluate condition and prescribe appropriate treatment',
+                'Follow treatment plan and medication schedule as prescribed',
+                'Maintain good nutrition to support recovery',
+                'Monitor temperature and other vital signs if advised',
+                'Continue regular daily activities as tolerated'
+            ]
+            follow_up = [
+                'Follow-up appointment in 5-7 days or as directed',
+                'Contact healthcare provider if symptoms persist beyond expected timeline',
+                'Report any new or worsening symptoms promptly',
+                'Complete prescribed treatment course fully'
+            ]
+            
+        else:  # ROUTINE
+            immediate = [
+                'Schedule routine medical consultation within 1-2 weeks',
+                'Monitor and document symptoms for discussion with healthcare provider',
+                'Maintain healthy lifestyle: adequate hydration, balanced diet, regular sleep',
+                'Continue normal daily activities unless symptoms worsen'
+            ]
+            short_term = [
+                'Healthcare provider will conduct evaluation during scheduled visit',
+                'Discuss all symptoms, concerns, and medical history thoroughly',
+                'Follow any treatment recommendations or lifestyle modifications advised',
+                'Take prescribed medications as directed'
+            ]
+            follow_up = [
+                'Attend follow-up appointments as scheduled',
+                'Monitor for any changes in symptoms or condition',
+                'Maintain communication with healthcare provider as needed',
+                'Continue preventive health measures and healthy lifestyle'
+            ]
         
         return {
-            'immediate': immediate[:10],  # Limit to 10 items for readability
-            'short_term': short_term[:10],
+            'immediate': immediate,
+            'short_term': short_term,
             'follow_up': follow_up[:8]
         }
     
@@ -551,14 +591,32 @@ class TreatmentAgent:
         return warnings
     
     def _define_success_criteria(self, diagnosis: Dict) -> List[str]:
-        """Define success criteria for treatment."""
-        return [
-            'Symptom improvement within expected timeframe',
-            'No worsening of condition',
-            'Vital signs return to normal range',
-            'Patient able to perform daily activities',
-            'Follow-up appointments completed'
+        """Define clear, measurable success criteria for treatment monitoring."""
+        primary_diagnosis = diagnosis.get('primary_diagnosis', '').lower()
+        
+        # General success criteria applicable to most conditions
+        criteria = [
+            'Reduction in severity or frequency of symptoms',
+            'Vital signs stabilize and return to normal range',
+            'Patient able to resume normal daily activities',
+            'No development of new symptoms or complications',
+            'Patient reports feeling better and improved quality of life'
         ]
+        
+        # Add condition-specific criteria
+        if any(word in primary_diagnosis for word in ['fever', 'temperature', 'pyrexia']):
+            criteria.append('Temperature returns to normal (below 38°C/100.4°F)')
+        
+        if any(word in primary_diagnosis for word in ['pain', 'ache', 'discomfort']):
+            criteria.append('Pain level reduces from initial severity (use 0-10 scale)')
+        
+        if any(word in primary_diagnosis for word in ['infection', 'bacterial', 'viral']):
+            criteria.append('Signs of infection resolve (no fever, improved white blood cell count)')
+        
+        if any(word in primary_diagnosis for word in ['respiratory', 'cough', 'breathing']):
+            criteria.append('Breathing becomes easier, respiratory rate normalizes')
+        
+        return criteria[:6]  # Return top 6 criteria
     
     def _generate_medication_list(self, diagnosis: str) -> List[Dict]:
         """Generate medication list based on diagnosis."""

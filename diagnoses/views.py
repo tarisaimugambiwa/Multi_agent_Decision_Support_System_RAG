@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import CreateView, ListView, DetailView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.http import JsonResponse
@@ -181,31 +182,30 @@ class CaseCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
             )
             
             # 5. TREATMENT: Create action plan and recommendations
-            treatment_results = None
-            if routing_decision['urgency_level'] in ['moderate', 'high', 'critical']:
-                treatment_results = treatment_agent.create_action_plan(
-                    diagnosis=diagnosis_results,
-                    urgency_level=routing_decision['urgency_level'],
-                    symptoms=symptom_list,
-                    red_flags=diagnosis_results.get('red_flags', []),
-                    emergency_conditions=diagnosis_results.get('emergency_conditions', [])
+            # Always generate treatment recommendations for all urgency levels
+            treatment_results = treatment_agent.create_action_plan(
+                diagnosis=diagnosis_results,
+                urgency_level=routing_decision['urgency_level'],
+                symptoms=symptom_list,
+                red_flags=diagnosis_results.get('red_flags', []),
+                emergency_conditions=diagnosis_results.get('emergency_conditions', [])
+            )
+            
+            # Get medication recommendations with symptoms
+            medication_plan = treatment_agent.recommend_medications(
+                diagnosis=diagnosis_results,
+                symptoms=symptom_list,
+                patient_history=patient_history,
+                allergies=[patient.allergies] if patient.allergies else []
+            )
+            treatment_results['medications'] = medication_plan
+            
+            # Get first aid instructions if critical
+            if routing_decision['urgency_level'] == 'critical':
+                first_aid = treatment_agent.provide_first_aid(
+                    diagnosis_results['primary_diagnosis']
                 )
-                
-                # Get medication recommendations with symptoms
-                medication_plan = treatment_agent.recommend_medications(
-                    diagnosis=diagnosis_results,
-                    symptoms=symptom_list,
-                    patient_history=patient_history,
-                    allergies=[patient.allergies] if patient.allergies else []
-                )
-                treatment_results['medications'] = medication_plan
-                
-                # Get first aid instructions if critical
-                if routing_decision['urgency_level'] == 'critical':
-                    first_aid = treatment_agent.provide_first_aid(
-                        diagnosis_results['primary_diagnosis']
-                    )
-                    treatment_results['first_aid'] = first_aid
+                treatment_results['first_aid'] = first_aid
             
             # 6. COORDINATOR: Coordinate all agent results
             coordinated_result = coordinator.coordinate_agents(
@@ -218,6 +218,11 @@ class CaseCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
             # ===== UPDATE CASE WITH AGENT RESULTS =====
             
             # Compile comprehensive AI diagnosis
+            # Ensure confidence is a percentage (0-100)
+            confidence_percentage = diagnosis_results['confidence_score']
+            if confidence_percentage <= 1.0:
+                confidence_percentage = confidence_percentage * 100
+            
             comprehensive_diagnosis = {
                 'multi_agent_system': 'HealthFlow DMS v1.0',
                 'timestamp': timezone.now().isoformat(),
@@ -229,7 +234,7 @@ class CaseCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
                 },
                 'diagnosis': {
                     'primary_diagnosis': diagnosis_results['primary_diagnosis'],
-                    'confidence': diagnosis_results['confidence_score'],
+                    'confidence': round(confidence_percentage, 1),  # Ensure percentage format
                     'explanation': diagnosis_results.get('explanation', ''),  # Plain language explanation
                     'differential_diagnoses': diagnosis_results['differential_diagnoses'],
                     'red_flags': diagnosis_results['red_flags'],
@@ -729,3 +734,242 @@ def search_patients(request):
         'results': results,
         'message': '' if results else f'No patients found matching "{query}"'
     })
+
+
+@login_required
+def regenerate_diagnosis(request, pk):
+    """
+    API endpoint to regenerate AI diagnosis for a case.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        case = get_object_or_404(Case, pk=pk)
+        
+        # Check permissions
+        if request.user.role not in ['NURSE', 'DOCTOR']:
+            return JsonResponse({'error': 'Insufficient permissions'}, status=403)
+        
+        # Get patient data
+        patient = case.patient
+        symptoms = case.symptoms
+        vital_signs = case.vital_signs or {}
+        
+        # ===== MULTI-AGENT SYSTEM WORKFLOW =====
+        
+        # 1. Initialize all agents
+        coordinator = CoordinatorAgent()
+        retriever = RetrieverAgent()
+        diagnosis_agent = DiagnosisAgent()
+        treatment_agent = TreatmentAgent()
+        
+        # 2. COORDINATOR: Route the case and assess urgency
+        routing_decision = coordinator.route_case(case, symptoms, vital_signs)
+        
+        # 3. RETRIEVER: Search medical knowledge base
+        symptom_list = [s.strip() for s in symptoms.split(',') if s.strip()]
+        retriever_results = retriever.search_protocols(
+            query=symptoms,
+            symptoms=symptom_list,
+            top_k=5
+        )
+        
+        # 4. DIAGNOSIS: Analyze symptoms
+        patient_history = {
+            'medical_history': patient.medical_history,
+            'allergies': patient.allergies,
+        }
+        
+        demographics = {
+            'age': patient.get_age(),
+            'gender': patient.get_gender_display(),
+        }
+        
+        diagnosis_results = diagnosis_agent.analyze_symptoms(
+            symptoms=symptoms,
+            patient_history=patient_history,
+            demographics=demographics,
+            vital_signs=vital_signs,
+            retriever_context=retriever_results
+        )
+        
+        # 5. TREATMENT: Create action plan
+        # Always generate treatment recommendations for all urgency levels
+        treatment_results = treatment_agent.create_action_plan(
+            diagnosis=diagnosis_results,
+            urgency_level=routing_decision['urgency_level'],
+            symptoms=symptom_list,
+            red_flags=diagnosis_results.get('red_flags', []),
+            emergency_conditions=diagnosis_results.get('emergency_conditions', [])
+        )
+        
+        medication_plan = treatment_agent.recommend_medications(
+            diagnosis=diagnosis_results,
+            symptoms=symptom_list,
+            patient_history=patient_history,
+            allergies=[patient.allergies] if patient.allergies else []
+        )
+        treatment_results['medications'] = medication_plan
+        
+        # 6. COORDINATOR: Coordinate all results
+        coordinated_result = coordinator.coordinate_agents(
+            case,
+            retriever_results,
+            diagnosis_results,
+            treatment_results
+        )
+        
+        # Compile comprehensive diagnosis
+        # Ensure confidence is a percentage (0-100)
+        confidence_percentage = diagnosis_results['confidence_score']
+        if confidence_percentage <= 1.0:
+            confidence_percentage = confidence_percentage * 100
+        
+        comprehensive_diagnosis = {
+            'multi_agent_system': 'HealthFlow DMS v1.0',
+            'timestamp': timezone.now().isoformat(),
+            'routing': routing_decision,
+            'retriever': {
+                'knowledge_base_results': retriever_results.get('results', []),
+                'sources': retriever_results.get('sources', []),
+                'total_documents': retriever_results.get('total_found', 0)
+            },
+            'diagnosis': {
+                'primary_diagnosis': diagnosis_results['primary_diagnosis'],
+                'confidence': round(confidence_percentage, 1),  # Ensure percentage format
+                'explanation': diagnosis_results.get('explanation', ''),
+                'differential_diagnoses': diagnosis_results['differential_diagnoses'],
+                'red_flags': diagnosis_results['red_flags'],
+                'emergency_conditions': diagnosis_results['emergency_conditions'],
+                'recommended_tests': diagnosis_results['recommended_tests'],
+            },
+            'treatment': treatment_results,
+            'coordination': coordinated_result,
+        }
+        
+        # Update case
+        case.ai_diagnosis = json.dumps(comprehensive_diagnosis, indent=2)
+        case.priority = routing_decision['priority']
+        case.status = routing_decision['recommended_status']
+        case.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Diagnosis regenerated successfully',
+            'diagnosis': diagnosis_results['primary_diagnosis']
+        })
+        
+    except Exception as e:
+        print(f"Error regenerating diagnosis: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def submit_doctor_review(request, case_id):
+    """
+    API endpoint for doctors to submit reviews and comments on cases.
+    """
+    # Check if user is a doctor
+    if request.user.role != 'DOCTOR':
+        return JsonResponse({
+            'success': False,
+            'error': 'Only doctors can submit reviews'
+        }, status=403)
+    
+    try:
+        case = get_object_or_404(Case, id=case_id)
+        
+        # Parse request data
+        data = json.loads(request.body)
+        doctor_review = data.get('doctor_review', '').strip()
+        doctor_decision = data.get('doctor_decision', '')
+        
+        # Validate input
+        if not doctor_review:
+            return JsonResponse({
+                'success': False,
+                'error': 'Review comment is required'
+            }, status=400)
+        
+        if doctor_decision not in ['approved', 'modified', 'rejected']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Valid decision is required (approved, modified, or rejected)'
+            }, status=400)
+        
+        # Update case with doctor's review
+        case.doctor_review = doctor_review
+        case.doctor_decision = doctor_decision
+        case.reviewed_by = request.user
+        case.reviewed_at = timezone.now()
+        
+        # Update status based on decision
+        if doctor_decision == 'approved':
+            case.status = 'COMPLETED'
+        elif doctor_decision == 'modified':
+            case.status = 'IN_PROGRESS'
+        elif doctor_decision == 'rejected':
+            case.status = 'DOCTOR_REVIEW'
+        
+        case.save()
+
+        # Notify the nurse who created the case that a doctor reviewed it
+        try:
+            from .models import Notification
+            from django.urls import reverse
+
+            if case.nurse:
+                Notification.objects.create(
+                    recipient=case.nurse,
+                    actor=request.user,
+                    verb=f"Doctor review on Case #{case.id}",
+                    description=doctor_review,
+                    target_case=case,
+                    link=reverse('diagnoses:case_detail', args=[case.id])
+                )
+        except Exception as _e:
+            # Non-fatal: log and continue
+            print(f"Failed to create notification: {_e}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Review submitted successfully',
+            'decision': doctor_decision
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        print(f"Error submitting doctor review: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_notification_read(request, notification_id):
+    """Mark a notification as read for the logged in user (AJAX).
+
+    Returns JSON {success: True} on success.
+    """
+    try:
+        from .models import Notification
+
+        notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
+        notification.read_at = timezone.now()
+        notification.save()
+
+        return JsonResponse({'success': True})
+    except Exception as e:
+        print(f"Error marking notification read: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

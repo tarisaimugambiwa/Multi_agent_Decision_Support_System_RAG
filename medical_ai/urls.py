@@ -174,8 +174,11 @@ class RoleBasedLoginView(BaseLoginView):
 
 
 urlpatterns = [
-    # Home page - redirects to app login if not authenticated
-    path("", home_view, name="home"),
+    # Root URL - redirect directly to login page
+    path("", lambda request: redirect('login'), name="root"),
+    
+    # Home page - dashboard after login
+    path("home/", home_view, name="home"),
     
     # Authentication URLs - Main app login (NOT admin login)
     path("accounts/", include([

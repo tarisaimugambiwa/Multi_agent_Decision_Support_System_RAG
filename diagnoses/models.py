@@ -1,5 +1,8 @@
 from django.db import models
 from django.conf import settings
+from django.db.models.signals import pre_save, post_save
+from django.dispatch import receiver
+from django.utils import timezone
 
 
 class Patient(models.Model):
@@ -166,3 +169,95 @@ class Case(models.Model):
         """Mark the case as completed."""
         self.status = 'COMPLETED'
         self.save()
+
+
+class Notification(models.Model):
+    """Simple notification model for user alerts related to cases."""
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notifications'
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='actor_notifications',
+        null=True,
+        blank=True
+    )
+    verb = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    target_case = models.ForeignKey(
+        'Case',
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        null=True,
+        blank=True
+    )
+    data = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    link = models.CharField(max_length=255, blank=True, help_text='Optional relative link to view')
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Notification for {self.recipient} - {self.verb}"
+
+    @property
+    def is_read(self):
+        return self.read_at is not None
+
+
+# Signals: notify doctors when a case becomes DOCTOR_REVIEW
+@receiver(pre_save, sender=Case)
+def capture_previous_status(sender, instance, **kwargs):
+    """Store previous status on the instance so post_save can compare."""
+    if instance.pk:
+        try:
+            previous = sender.objects.get(pk=instance.pk)
+            instance._previous_status = previous.status
+        except sender.DoesNotExist:
+            instance._previous_status = None
+    else:
+        instance._previous_status = None
+
+
+@receiver(post_save, sender=Case)
+def notify_doctors_on_review_status(sender, instance, created, **kwargs):
+    """Create notifications for doctors when a case enters DOCTOR_REVIEW.
+
+    If the case has an assigned `doctor`, notify only that doctor. Otherwise
+    create a notification for all users with role 'DOCTOR'.
+    """
+    try:
+        # Only act when case newly entered DOCTOR_REVIEW
+        prev = getattr(instance, '_previous_status', None)
+        became_doctor_review = (instance.status == 'DOCTOR_REVIEW') and (created or prev != 'DOCTOR_REVIEW')
+
+        if not became_doctor_review:
+            return
+
+        # Lazy import to avoid circular imports at module load
+        from users.models import User
+
+        recipients = []
+        if instance.doctor:
+            recipients = [instance.doctor]
+        else:
+            recipients = list(User.objects.filter(role='DOCTOR'))
+
+        for recipient in recipients:
+            Notification.objects.create(
+                recipient=recipient,
+                actor=instance.nurse,
+                verb=f"New case requiring review: Case #{instance.id}",
+                description=(instance.symptoms[:300] + '...') if instance.symptoms else '',
+                target_case=instance,
+                link=f"/diagnoses/{instance.id}/"
+            )
+
+    except Exception as e:
+        # Non-fatal: log and continue
+        print(f"Error creating review notifications: {e}")
