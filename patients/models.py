@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from datetime import date
 
 
 class Patient(models.Model):
@@ -64,6 +65,16 @@ class Patient(models.Model):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+    
+    def get_age(self):
+        """Calculate patient age from date of birth"""
+        if not self.date_of_birth:
+            return None
+        today = date.today()
+        age = today.year - self.date_of_birth.year - (
+            (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
+        )
+        return age
 
 
 class MedicalRecord(models.Model):
