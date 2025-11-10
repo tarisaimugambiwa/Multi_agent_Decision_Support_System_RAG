@@ -49,7 +49,7 @@
                         <div class="mb-3">
                             <label for="{{ form.vital_signs.id_for_label }}" class="form-label">Vital Signs (JSON)</label>
                             {{ form.vital_signs }}
-                            <small class="form-text text-muted">Optional: {"temperature": 37.5, "heart_rate": 72, "blood_pressure": "120/80"}</small>
+                            <small class="form-text text-muted">Optional: {"temperature": 37.5, "heart_rate": 72, "blood_pressure": "120/80"} (Temperature in °C)</small>
                             {% if form.vital_signs.errors %}
                                 <div class="text-danger small mt-1">{{ form.vital_signs.errors }}</div>
                             {% endif %}
@@ -127,7 +127,7 @@
                     
                     <hr>
                     
-                    <h6>Vital Signs Format:</h6>
+                    <h6>Vital Signs Format (Temperature in °C):</h6>
                     <code class="small text-muted">
                         {"temperature": 37.5, "heart_rate": 72}
                     </code>
