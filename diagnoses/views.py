@@ -1,4 +1,5 @@
 import json
+import base64
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import CreateView, ListView, DetailView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -37,12 +38,16 @@ class CaseForm(ModelForm):
     
     class Meta:
         model = Case
-        fields = ['patient', 'symptoms', 'vital_signs', 'priority']
+        fields = ['patient', 'symptoms', 'symptom_image', 'vital_signs', 'priority']
         widgets = {
             'symptoms': forms.Textarea(attrs={
                 'rows': 6,
                 'placeholder': 'Describe patient symptoms, chief complaints, and relevant observations...',
                 'class': 'form-control'
+            }),
+            'symptom_image': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*'
             }),
             'patient': forms.Select(attrs={'class': 'form-select'}),
             'priority': forms.Select(attrs={'class': 'form-select'}),
@@ -71,6 +76,21 @@ class CaseForm(ModelForm):
             
         except json.JSONDecodeError:
             raise forms.ValidationError("Invalid JSON format for vital signs")
+    
+    def clean_symptom_image(self):
+        """Convert symptom image to base64."""
+        symptom_image = self.cleaned_data.get('symptom_image')
+        
+        if symptom_image:
+            # Read the file and convert to base64
+            image_data = symptom_image.read()
+            base64_image = base64.b64encode(image_data).decode('utf-8')
+            
+            # Store the base64 string and filename
+            self.cleaned_data['symptom_image_base64'] = base64_image
+            self.cleaned_data['symptom_image_filename'] = symptom_image.name
+            
+        return symptom_image
 
 
 class CaseCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
@@ -135,6 +155,16 @@ class CaseCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
             
             # Save the case first (to get an ID)
             self.object = form.save(commit=False)
+            
+            # Handle symptom image - convert to base64
+            if form.cleaned_data.get('symptom_image'):
+                base64_image = form.cleaned_data.get('symptom_image_base64')
+                filename = form.cleaned_data.get('symptom_image_filename')
+                
+                if base64_image:
+                    self.object.symptom_image = base64_image
+                    self.object.symptom_image_filename = filename
+            
             self.object.save()
             
             # ===== MULTI-AGENT SYSTEM WORKFLOW =====
@@ -989,3 +1019,91 @@ def mark_notification_read(request, notification_id):
     except Exception as e:
         print(f"Error marking notification read: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def save_treatment_comments(request, case_id):
+    """Save doctor's comments on treatment plan (AJAX).
+    
+    Returns JSON {success: True} on success.
+    """
+    try:
+        case = get_object_or_404(Case, id=case_id)
+        
+        # Check if user is a doctor or staff
+        if not hasattr(request.user, 'role') or (request.user.role != 'DOCTOR' and not request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'Only doctors can add treatment comments'
+            }, status=403)
+        
+        data = json.loads(request.body)
+        comments_text = data.get('comments', '').strip()
+        
+        if not comments_text:
+            return JsonResponse({
+                'success': False,
+                'error': 'Comments cannot be empty'
+            }, status=400)
+        
+        case.treatment_comments = comments_text
+        case.treatment_comments_date = timezone.now()
+        case.save()
+        
+        return JsonResponse({'success': True})
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        print(f"Error saving treatment comments: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def save_diagnosis_comments(request, case_id):
+    """Save doctor's comments on AI diagnosis (AJAX).
+    
+    Returns JSON {success: True} on success.
+    """
+    try:
+        case = get_object_or_404(Case, id=case_id)
+        
+        # Check if user is a doctor or staff
+        if not hasattr(request.user, 'role') or (request.user.role != 'DOCTOR' and not request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'Only doctors can add diagnosis comments'
+            }, status=403)
+        
+        data = json.loads(request.body)
+        comments_text = data.get('comments', '').strip()
+        
+        if not comments_text:
+            return JsonResponse({
+                'success': False,
+                'error': 'Comments cannot be empty'
+            }, status=400)
+        
+        case.diagnosis_comments = comments_text
+        case.diagnosis_comments_date = timezone.now()
+        case.save()
+        
+        return JsonResponse({'success': True})
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        print(f"Error saving diagnosis comments: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

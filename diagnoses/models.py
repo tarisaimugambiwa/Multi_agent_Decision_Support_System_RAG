@@ -63,6 +63,17 @@ class Case(models.Model):
     symptoms = models.TextField(
         help_text='Patient symptoms and chief complaints'
     )
+    symptom_image = models.TextField(
+        null=True,
+        blank=True,
+        help_text='Visual documentation of symptoms (base64 encoded image)'
+    )
+    symptom_image_filename = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text='Original filename of the symptom image'
+    )
     vital_signs = models.JSONField(
         default=dict,
         blank=True,
@@ -136,6 +147,28 @@ class Case(models.Model):
     doctor_rejection = models.TextField(
         blank=True,
         help_text='JSON data for AI diagnosis rejection details'
+    )
+    
+    # Treatment Plan Comments
+    treatment_comments = models.TextField(
+        blank=True,
+        help_text='Doctor\'s comments and observations on treatment plan'
+    )
+    treatment_comments_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Timestamp when treatment comments were added'
+    )
+    
+    # AI Diagnosis Comments
+    diagnosis_comments = models.TextField(
+        blank=True,
+        help_text='Doctor\'s comments and observations on AI diagnosis'
+    )
+    diagnosis_comments_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Timestamp when diagnosis comments were added'
     )
     
     class Meta:

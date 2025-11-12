@@ -265,6 +265,32 @@
                 <h3 class="section-title">
                     <i class="fas fa-stethoscope"></i>Chief Complaints & Symptoms
                 </h3>
+                
+                <!-- Symptom Picture (if uploaded) -->
+                {% if case.symptom_image %}
+                <div class="mb-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-image me-2"></i>Symptom Visual Documentation
+                            </h6>
+                        </div>
+                        <div class="card-body text-center">
+                            <img src="data:image/jpeg;base64,{{ case.symptom_image }}" 
+                                 alt="Symptom Picture" 
+                                 style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            {% if case.symptom_image_filename %}
+                            <p class="text-muted mt-2 mb-0">
+                                <i class="fas fa-file-image me-1"></i>
+                                <small>Uploaded: {{ case.symptom_image_filename }}</small>
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Symptoms Description -->
                 <p class="lead">{{ case.symptoms }}</p>
                 
                 {% if case.vital_signs %}
@@ -350,6 +376,78 @@
                 {% endif %}
             </div>
             {% endif %}
+            
+            <!-- Doctor's Comments on AI Diagnosis -->
+            {% if user.role == 'DOCTOR' %}
+            <div class="report-section" style="background: linear-gradient(135deg, #e0f7ff 0%, #f0e6ff 100%); border-left: 5px solid #00bcd4;">
+                <h3 class="section-title" style="color: #00796b;">
+                    <i class="fas fa-stethoscope" style="color: #00bcd4;"></i>Doctor's Assessment of AI Diagnosis
+                </h3>
+                
+                {% if case.diagnosis_comments %}
+                <!-- Display existing diagnosis comments -->
+                <div class="alert alert-info" style="background: linear-gradient(135deg, #b3e5fc 0%, #c8e6c9 100%); border-left: 4px solid #00796b;" id="diagnosis-comments-display">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div style="flex: 1;">
+                            <strong><i class="fas fa-comment me-2"></i>Your Assessment:</strong>
+                            <p class="mt-2 mb-1">{{ case.diagnosis_comments }}</p>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                Last updated: {{ case.diagnosis_comments_date|date:"M d, Y - H:i" }}
+                            </small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary ms-3" 
+                                onclick="showEditDiagnosisComments()"
+                                style="min-width: 90px;">
+                            <i class="fas fa-edit me-1"></i>Edit
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Show input form for new diagnosis comments -->
+                <div class="alert alert-warning" style="background: linear-gradient(135deg, #ffe0b2 0%, #fff9c4 100%); border-left: 4px solid #ff6f00;">
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Review the AI diagnosis above and add your professional assessment of its accuracy and recommendations.
+                    </p>
+                </div>
+                {% endif %}
+                
+                <div id="diagnosis-comments-form">
+                    <textarea id="diagnosis-comments-textarea" 
+                              class="form-control mb-2" 
+                              rows="4" 
+                              placeholder="Enter your assessment of the AI diagnosis, any concerns, or additional observations..."
+                              style="resize: vertical; border: 2px solid #00bcd4;">{% if case.diagnosis_comments %}{{ case.diagnosis_comments }}{% endif %}</textarea>
+                    
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" onclick="saveDiagnosisComments()" style="background-color: #00796b; border-color: #00796b;">
+                            <i class="fas fa-save me-2"></i>Save Assessment
+                        </button>
+                        <button class="btn btn-secondary" id="cancel-diagnosis-btn" 
+                                onclick="cancelDiagnosisComments()">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% elif user.role == 'NURSE' and case.diagnosis_comments %}
+            <!-- Nurses see diagnosis comments only after doctor writes them -->
+            <div class="report-section" style="background: linear-gradient(135deg, #e0f7ff 0%, #f0e6ff 100%); border-left: 5px solid #00bcd4;">
+                <h3 class="section-title" style="color: #00796b;">
+                    <i class="fas fa-stethoscope" style="color: #00bcd4;"></i>Doctor's Assessment of AI Diagnosis
+                </h3>
+                <div class="alert alert-info" style="background: linear-gradient(135deg, #b3e5fc 0%, #c8e6c9 100%); border-left: 4px solid #00796b;">
+                    <strong><i class="fas fa-comment me-2"></i>Doctor's Assessment:</strong>
+                    <p class="mt-2 mb-1">{{ case.diagnosis_comments }}</p>
+                    <small class="text-muted">
+                        <i class="fas fa-calendar me-1"></i>
+                        Provided: {{ case.diagnosis_comments_date|date:"M d, Y - H:i" }}
+                    </small>
+                </div>
+            </div>
+            {% endif %}
+            
             <!-- Treatment Plan -->
             {% if ai_diagnosis_data.treatment %}
             <div class="report-section">
@@ -560,6 +658,77 @@
                     {% endfor %}
                 </div>
                 {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Doctor's Comments on Treatment Plan -->
+            {% if user.role == 'DOCTOR' %}
+            <div class="report-section" style="background: linear-gradient(135deg, #fff8e1 0%, #ffe082 100%); border-left: 5px solid #fbc02d;">
+                <h3 class="section-title" style="color: #f57f17; border-bottom-color: #fbc02d;">
+                    <i class="fas fa-comment-medical me-2"></i>Doctor's Comments on Treatment Plan
+                </h3>
+                
+                {% if case.treatment_comments %}
+                <div class="alert alert-success" style="background: #e8f5e9; border-left: 4px solid #4caf50; margin-bottom: 15px;">
+                    <p class="mb-0">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        <strong>Comments added on {{ case.treatment_comments_date|date:"M d, Y g:i A" }}</strong>
+                    </p>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 6px; border-left: 3px solid #4caf50; margin-bottom: 15px;">
+                    {{ case.treatment_comments|linebreaks }}
+                </div>
+                <button type="button" class="btn btn-sm btn-warning" onclick="showEditTreatmentComments()">
+                    <i class="fas fa-edit me-1"></i>Edit Comments
+                </button>
+                {% else %}
+                <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-pencil-alt text-info me-2"></i>
+                        Add your clinical comments, modifications, or concerns about the treatment plan and recommendations.
+                    </p>
+                    <textarea id="treatmentCommentsText" class="form-control" rows="5" placeholder="Enter your comments on the treatment plan..."></textarea>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="saveTreatmentComments()">
+                            <i class="fas fa-save me-1"></i>Save Comments
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelTreatmentComments()">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Doctor's Comments Visibility for Nurses - Only show AFTER comments are written -->
+            {% if user.role == 'NURSE' and case.treatment_comments %}
+            <div class="report-section" style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-left: 5px solid #2196F3;">
+                <h3 class="section-title" style="color: #1976d2; border-bottom-color: #2196F3;">
+                    <i class="fas fa-stethoscope me-2"></i>Doctor's Clinical Review
+                </h3>
+                
+                <div class="alert alert-info" style="background: #e3f2fd; border-left: 4px solid #2196F3; margin-bottom: 15px;">
+                    <p class="mb-0">
+                        <i class="fas fa-check-circle text-info me-2"></i>
+                        <strong>Doctor's review received on {{ case.treatment_comments_date|date:"M d, Y g:i A" }}</strong>
+                    </p>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 6px; border-left: 3px solid #2196F3;">
+                    {{ case.treatment_comments|linebreaks }}
+                </div>
+            </div>
+            {% elif user.role == 'NURSE' %}
+            <div class="report-section" style="background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); border-left: 5px solid #e91e63;">
+                <h3 class="section-title" style="color: #c2185b; border-bottom-color: #e91e63;">
+                    <i class="fas fa-hourglass-half me-2"></i>Awaiting Doctor's Review
+                </h3>
+                
+                <div class="alert alert-warning" style="background: #fff3e0; border-left: 4px solid #ff9800;">
+                    <i class="fas fa-clock me-2"></i>
+                    <strong>Waiting for doctor's clinical review and comments on this treatment plan.</strong>
+                    <p class="mt-2 mb-0 text-muted">Once the doctor reviews this case and adds their clinical comments, they will appear here.</p>
+                </div>
             </div>
             {% endif %}
 
@@ -896,5 +1065,151 @@ async function submitDoctorComment(event) {
         btn.innerHTML = originalText;
     }
 }
+
+// Treatment Comments Functions
+function saveTreatmentComments() {
+    const commentsText = document.getElementById('treatmentCommentsText').value.trim();
+    
+    if (!commentsText) {
+        alert('Please enter your comments before saving.');
+        return;
+    }
+    
+    const caseId = '{{ case.id }}';
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+    
+    fetch('/diagnoses/api/treatment-comments/' + caseId + '/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            comments: commentsText
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Comments saved successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to save comments'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while saving comments.');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+
+function showEditTreatmentComments() {
+    const commentsDiv = document.querySelector('div[style*="border-left: 3px solid #4caf50"]');
+    if (commentsDiv) {
+        const currentText = commentsDiv.innerText;
+        commentsDiv.innerHTML = '<textarea id="treatmentCommentsText" class="form-control" rows="5" style="border: 2px solid #fbc02d;">' + currentText + '</textarea><div class="mt-3"><button type="button" class="btn btn-sm btn-primary" onclick="saveTreatmentComments()"><i class="fas fa-save me-1"></i>Save Comments</button><button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()"><i class="fas fa-times me-1"></i>Cancel</button></div>';
+    }
+}
+
+function cancelTreatmentComments() {
+    const textarea = document.getElementById('treatmentCommentsText');
+    if (textarea && textarea.parentElement) {
+        textarea.parentElement.innerHTML = '';
+    }
+}
+
+// Diagnosis Comments Functions
+function saveDiagnosisComments() {
+    const commentsText = document.getElementById('diagnosis-comments-textarea').value.trim();
+    
+    if (!commentsText) {
+        alert('Please enter your assessment before saving.');
+        return;
+    }
+    
+    const caseId = '{{ case.id }}';
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+    
+    fetch('/diagnoses/api/diagnosis-comments/' + caseId + '/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            comments: commentsText
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Assessment saved successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to save assessment'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while saving assessment.');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+
+function showEditDiagnosisComments() {
+    const displayDiv = document.getElementById('diagnosis-comments-display');
+    const formDiv = document.getElementById('diagnosis-comments-form');
+    
+    if (displayDiv && formDiv) {
+        displayDiv.style.display = 'none';
+        formDiv.style.display = 'block';
+        document.getElementById('cancel-diagnosis-btn').style.display = 'inline-block';
+        document.getElementById('diagnosis-comments-textarea').focus();
+    }
+}
+
+function cancelDiagnosisComments() {
+    const displayDiv = document.getElementById('diagnosis-comments-display');
+    const formDiv = document.getElementById('diagnosis-comments-form');
+    
+    if (displayDiv && formDiv) {
+        if (displayDiv.innerHTML.trim()) {
+            formDiv.style.display = 'none';
+            displayDiv.style.display = 'block';
+        }
+    }
+}
+
+// Initialize diagnosis comments form visibility on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const displayDiv = document.getElementById('diagnosis-comments-display');
+    const formDiv = document.getElementById('diagnosis-comments-form');
+    
+    if (displayDiv && formDiv) {
+        if (displayDiv.innerHTML.trim()) {
+            formDiv.style.display = 'none';
+        } else {
+            formDiv.style.display = 'block';
+        }
+    }
+});
 </script>
 {% endblock %}
+

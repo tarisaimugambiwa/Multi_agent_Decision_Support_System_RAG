@@ -98,14 +98,55 @@
                             </div>
                         </div>
 
-                        <!-- Symptoms -->
+                        <!-- Symptoms with Picture Upload -->
                         <div class="form-section">
-                            <h5><i class="fas fa-notes-medical me-2"></i>Symptoms</h5>
-                            <label for="{{ form.symptoms.id_for_label }}" class="form-label">Symptoms *</label>
-                            {{ form.symptoms }}
-                            {% if form.symptoms.errors %}
-                                <div class="text-danger">{{ form.symptoms.errors }}</div>
-                            {% endif %}
+                            <h5><i class="fas fa-notes-medical me-2"></i>Symptoms & Visual Documentation</h5>
+                            
+                            <!-- Picture Upload for Symptoms -->
+                            <div class="mb-4">
+                                <label class="form-label"><i class="fas fa-image me-2"></i>Upload Symptom Picture (Optional)</label>
+                                <div class="card bg-light border-dashed" style="border: 2px dashed #007bff; padding: 30px; text-align: center; cursor: pointer;" id="imageDropZone">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                    <p class="mb-2"><strong>Click to upload or drag and drop</strong></p>
+                                    <p class="text-muted small">PNG, JPG, GIF up to 10MB</p>
+                                    <input type="file" id="symptom_image" name="symptom_image" accept="image/*" style="display: none;" class="form-control">
+                                </div>
+                                
+                                <!-- Image Preview -->
+                                <div id="imagePreviewContainer" style="display: none; margin-top: 15px;">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <img id="imagePreview" src="" alt="Symptom Preview" style="max-width: 100%; max-height: 300px; border-radius: 8px;">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6><i class="fas fa-file-image me-2"></i>Image Details</h6>
+                                                    <p><strong>File Name:</strong> <span id="fileName"></span></p>
+                                                    <p><strong>File Size:</strong> <span id="fileSize"></span></p>
+                                                    <p><strong>Upload Status:</strong> <span class="badge bg-success">Ready</span></p>
+                                                    <button type="button" class="btn btn-sm btn-danger" onclick="clearImageUpload()" title="Delete this image and upload a new one if needed">
+                                                        <i class="fas fa-trash me-1"></i>Remove Image
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Symptoms Description -->
+                            <div>
+                                <label for="{{ form.symptoms.id_for_label }}" class="form-label">Detailed Symptoms Description *</label>
+                                {{ form.symptoms }}
+                                {% if form.symptoms.errors %}
+                                    <div class="text-danger">{{ form.symptoms.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-lightbulb me-1"></i>
+                                    Include: type of symptom, severity (mild/moderate/severe), duration, location, associated symptoms, and any observations from the picture if uploaded.
+                                </small>
+                            </div>
                         </div>
 
                         <!-- Vital Signs -->
@@ -369,6 +410,106 @@ $(document).ready(function() {
             '<i class="fas fa-spinner fa-spin me-2"></i>Processing...'
         );
     });
+
+    // Image Upload Functionality
+    const imageDropZone = document.getElementById('imageDropZone');
+    const imageInput = document.getElementById('symptom_image');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+
+    // Click to upload
+    imageDropZone.addEventListener('click', function() {
+        imageInput.click();
+    });
+
+    // Handle file selection from input
+    imageInput.addEventListener('change', function(e) {
+        handleImageUpload(e.target.files[0]);
+    });
+
+    // Drag and drop events
+    imageDropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        imageDropZone.style.background = '#e7f3ff';
+        imageDropZone.style.borderColor = '#0066cc';
+    });
+
+    imageDropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        imageDropZone.style.background = 'transparent';
+        imageDropZone.style.borderColor = '#007bff';
+    });
+
+    imageDropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        imageDropZone.style.background = 'transparent';
+        imageDropZone.style.borderColor = '#007bff';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleImageUpload(files[0]);
+        }
+    });
+
+    function handleImageUpload(file) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select a valid image file');
+            return;
+        }
+
+        // Validate file size (10MB)
+        const maxSize = 10 * 1024 * 1024;
+        if (file.size > maxSize) {
+            alert('File size must be less than 10MB');
+            return;
+        }
+
+        // Read and display the image
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            imagePreview.src = e.target.result;
+            fileName.textContent = file.name;
+            fileSize.textContent = (file.size / 1024).toFixed(2) + ' KB';
+            imagePreviewContainer.style.display = 'block';
+            
+            // Update the file input
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            imageInput.files = dataTransfer.files;
+        };
+        reader.readAsDataURL(file);
+    }
 });
+
+// Clear Image Upload Function - Outside of ready() so it's accessible from HTML onclick
+function clearImageUpload() {
+    // Get references to DOM elements
+    const imageInput = document.getElementById('symptom_image');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const imageDropZone = document.getElementById('imageDropZone');
+    
+    // Clear all image data
+    imageInput.value = '';
+    imagePreviewContainer.style.display = 'none';
+    imagePreview.src = '';
+    fileName.textContent = '';
+    fileSize.textContent = '';
+    
+    // Show confirmation message
+    alert('Image removed successfully! You can upload a new image if needed.');
+    
+    // Reset drop zone styling
+    imageDropZone.style.background = 'transparent';
+    imageDropZone.style.borderColor = '#007bff';
+}
 </script>
 {% endblock %}

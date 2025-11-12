@@ -25,4 +25,6 @@ urlpatterns = [
     path('api/regenerate-diagnosis/<int:pk>/', views.regenerate_diagnosis, name='regenerate_diagnosis'),
     path('api/doctor-review/<int:case_id>/', views.submit_doctor_review, name='submit_doctor_review'),
      path('api/notifications/mark-read/<int:notification_id>/', views.mark_notification_read, name='mark_notification_read'),
+    path('api/treatment-comments/<int:case_id>/', views.save_treatment_comments, name='save_treatment_comments'),
+    path('api/diagnosis-comments/<int:case_id>/', views.save_diagnosis_comments, name='save_diagnosis_comments'),
 ]
