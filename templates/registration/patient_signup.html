@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient Signup{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">Create Patient Account</div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {# Show non-field errors (e.g., password mismatch) #}
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                {% for err in form.non_field_errors %}
+                                    <div>{{ err }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {{ form.username.label_tag }}
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="text-danger small mt-1">{{ form.username.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <div class="mb-3"></div>
+                        {{ form.email.label_tag }}
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger small mt-1">{{ form.email.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <div class="mb-3"></div>
+
+                        {{ form.password.label_tag }}
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <div class="text-danger small mt-1">{{ form.password.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <div class="mb-3"></div>
+                        {{ form.confirm_password.label_tag }}
+                        {{ form.confirm_password }}
+                        {% if form.confirm_password.errors %}
+                            <div class="text-danger small mt-1">{{ form.confirm_password.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <hr />
+                        {{ form.first_name.label_tag }}
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                            <div class="text-danger small mt-1">{{ form.first_name.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <div class="mb-3"></div>
+                        {{ form.last_name.label_tag }}
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                            <div class="text-danger small mt-1">{{ form.last_name.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <div class="mb-3"></div>
+                        {{ form.date_of_birth.label_tag }}
+                        {{ form.date_of_birth }}
+                        {% if form.date_of_birth.errors %}
+                            <div class="text-danger small mt-1">{{ form.date_of_birth.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <div class="mb-3"></div>
+                        {{ form.gender.label_tag }}
+                        {{ form.gender }}
+                        {% if form.gender.errors %}
+                            <div class="text-danger small mt-1">{{ form.gender.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <div class="mb-3"></div>
+                        {{ form.phone_number.label_tag }}
+                        {{ form.phone_number }}
+                        {% if form.phone_number.errors %}
+                            <div class="text-danger small mt-1">{{ form.phone_number.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <div class="mb-3"></div>
+                        {{ form.address.label_tag }}
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <div class="text-danger small mt-1">{{ form.address.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <div class="mb-3"></div>
+                        {{ form.medical_history.label_tag }}
+                        {{ form.medical_history }}
+                        {% if form.medical_history.errors %}
+                            <div class="text-danger small mt-1">{{ form.medical_history.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <div class="mb-3"></div>
+                        {{ form.allergies.label_tag }}
+                        {{ form.allergies }}
+                        {% if form.allergies.errors %}
+                            <div class="text-danger small mt-1">{{ form.allergies.errors.as_text|linebreaksbr }}</div>
+                        {% endif %}
+                        <div class="mb-3"></div>
+
+                        <button type="submit" class="btn btn-primary">Create Account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

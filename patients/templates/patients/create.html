@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Register Patient{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-3">Register New Patient</h2>
+
+    <form method="post" id="patientCreateForm">
+        {% csrf_token %}
+        <div class="card mb-3">
+            <div class="card-header"><strong>Personal Information</strong></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="id_first_name" class="form-label">First name</label>
+                        {{ form.first_name }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="id_last_name" class="form-label">Last name</label>
+                        {{ form.last_name }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="id_date_of_birth" class="form-label">Date of birth</label>
+                        {{ form.date_of_birth }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="id_gender" class="form-label">Gender</label>
+                        {{ form.gender }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header"><strong>Contact Information</strong></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="id_phone_number" class="form-label">Phone number</label>
+                        {{ form.phone_number }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="id_address" class="form-label">Address</label>
+                        {{ form.address }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header"><strong>Medical Information</strong></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="id_allergies" class="form-label">Allergies</label>
+                    {{ form.allergies }}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_medical_history" class="form-label">Medical History</label>
+                    {{ form.medical_history }}
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create patient</button>
+        <a href="{% url 'nurse_dashboard' %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+    </form>
+</div>
+{% endblock %}

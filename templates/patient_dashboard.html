@@ -1,0 +1,409 @@
+{% extends 'base.html' %}
+
+{% block title %}My Health Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: var(--brand-700);
+        color: white;
+        padding: 48px 40px;
+        margin-bottom: 40px;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0, 78, 212, 0.12);
+    }
+    
+    .dashboard-header h1 {
+        color: white;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+    
+    .dashboard-header p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
+        margin: 0;
+    }
+    
+    .cases-container {
+        display: grid;
+        gap: 24px;
+    }
+    
+    .case-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .case-card:hover {
+        border-color: rgba(55, 129, 255, 0.25);
+        box-shadow: 0 12px 28px rgba(0, 80, 212, 0.12);
+        transform: translateY(-2px);
+    }
+    
+    .case-header {
+        padding: 24px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f9fafb;
+    }
+    
+    .case-id {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .case-id h5 {
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+    
+    .case-date {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+    
+    .case-body {
+        padding: 32px;
+    }
+    
+    .report-section {
+        margin-bottom: 32px;
+    }
+    
+    .report-section:last-child {
+        margin-bottom: 0;
+    }
+    
+    .section-title {
+        display: flex;
+        align-items: center;
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: var(--text-primary);
+        margin-bottom: 16px;
+    }
+    
+    .section-title i {
+        margin-right: 10px;
+        color: var(--brand-700);
+        width: 24px;
+        text-align: center;
+    }
+    
+    .report-box {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 20px;
+    }
+    
+    .report-item {
+        margin-bottom: 12px;
+    }
+    
+    .report-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .report-label {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-bottom: 6px;
+        display: block;
+    }
+    
+    .report-value {
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+    
+    .confidence-badge {
+        display: inline-block;
+        background: transparent;
+        border: 1px solid #10b981;
+        color: #10b981;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+    
+    .warning-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .warning-list li {
+        padding: 8px 0;
+        padding-left: 24px;
+        position: relative;
+        color: var(--text-secondary);
+    }
+    
+    .warning-list li::before {
+        content: '⚠️';
+        position: absolute;
+        left: 0;
+    }
+    
+    .action-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .action-list li {
+        padding: 8px 0;
+        padding-left: 24px;
+        position: relative;
+        color: var(--text-secondary);
+    }
+    
+    .action-list li::before {
+        content: '✓';
+        position: absolute;
+        left: 0;
+        font-weight: 700;
+        color: var(--brand-700);
+    }
+    
+    .case-actions {
+        padding: 24px;
+        border-top: 1px solid #e5e7eb;
+        background: #f9fafb;
+        text-align: right;
+    }
+    
+    .btn-view-report {
+        background: var(--brand-700);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .btn-view-report:hover {
+        background: var(--brand-600);
+        transform: scale(1.02);
+    }
+    
+    .no-reports {
+        background: white;
+        border-radius: 12px;
+        padding: 60px 40px;
+        text-align: center;
+        border: 1px dashed #e5e7eb;
+    }
+    
+    .no-reports p {
+        color: var(--text-secondary);
+        font-size: 1rem;
+        margin: 0;
+    }
+    
+    .empty-state-icon {
+        font-size: 3rem;
+        color: #d1d5db;
+        margin-bottom: 16px;
+    }
+    
+    .doctor-review-badge {
+        display: inline-block;
+        background: transparent;
+        border: 1px solid var(--brand-700);
+        color: var(--brand-700);
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="background: #f3f4f6; min-height: calc(100vh - 70px);">
+    <div class="container">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-heartbeat me-3"></i>My Health Reports</h1>
+                    <p>All case reports and doctor reviews for {{ patient.full_name }}</p>
+                </div>
+            </div>
+        </div>
+
+        {# Anchor targets for sidebar quick links #}
+        <a id="ai_reports"></a>
+        <a id="doctor_reviews"></a>
+
+        <!-- Cases List -->
+        <div class="cases-container">
+            {% if cases %}
+                {% for case in cases %}
+                    <div class="case-card">
+                        <!-- Case Header -->
+                        <div class="case-header">
+                            <div class="case-id">
+                                <h5><i class="fas fa-file-medical me-2"></i>Case #{{ case.id }}</h5>
+                                <span class="case-date">{{ case.created_at|date:"M d, Y g:i A" }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Case Body -->
+                        <div class="case-body">
+
+                            <!-- AI Report Section -->
+                            <div class="report-section">
+                                <div class="section-title">
+                                    <i class="fas fa-robot"></i>AI Diagnosis Report
+                                </div>
+                                <div class="report-box">
+                                    {% if case.ai_report and case.ai_report.diagnosis %}
+                                        <!-- Primary Diagnosis -->
+                                        <div class="report-item">
+                                            <span class="report-label">Primary Diagnosis</span>
+                                            <div class="report-value" style="font-size: 1.1rem; font-weight: 700; color: var(--brand-700);">
+                                                {{ case.ai_report.diagnosis.primary_diagnosis }}
+                                            </div>
+                                        </div>
+
+                                        <!-- Explanation -->
+                                        {% if case.ai_report.diagnosis.explanation %}
+                                        <div class="report-item" style="margin-top: 16px;">
+                                            <span class="report-label">Explanation</span>
+                                            <div class="report-value" style="white-space: pre-wrap;">
+                                                {{ case.ai_report.diagnosis.explanation }}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Confidence -->
+                                        <div class="report-item" style="margin-top: 16px;">
+                                            <span class="report-label">Confidence Level</span>
+                                            <span class="confidence-badge">{{ case.ai_report.diagnosis.confidence }}%</span>
+                                        </div>
+
+                                        <!-- Red Flags / Warning Signs -->
+                                        {% if case.ai_report.diagnosis.red_flags %}
+                                        <div class="report-item" style="margin-top: 16px;">
+                                            <span class="report-label">⚠️ Warning Signs</span>
+                                            <ul class="warning-list">
+                                                {% for flag in case.ai_report.diagnosis.red_flags %}
+                                                    <li><strong>{{ flag.category }}:</strong> {{ flag.symptom }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Treatment Summary -->
+                                        {% if case.ai_report.treatment %}
+                                        <div class="report-item" style="margin-top: 20px;">
+                                            <span class="report-label">Treatment Recommendations</span>
+                                            {% if case.ai_report.treatment.immediate_actions %}
+                                                <div style="margin-top: 12px;">
+                                                    <strong style="color: var(--text-primary); font-size: 0.9rem;">Immediate Actions:</strong>
+                                                    <ul class="action-list" style="margin-top: 6px;">
+                                                        {% for a in case.ai_report.treatment.immediate_actions %}
+                                                            <li>{{ a }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            {% endif %}
+
+                                            {% if case.ai_report.treatment.short_term_actions %}
+                                                <div style="margin-top: 12px;">
+                                                    <strong style="color: var(--text-primary); font-size: 0.9rem;">Short-term Actions:</strong>
+                                                    <ul class="action-list" style="margin-top: 6px;">
+                                                        {% for a in case.ai_report.treatment.short_term_actions %}
+                                                            <li>{{ a }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            {% endif %}
+
+                                            {% if case.ai_report.treatment.follow_up_actions %}
+                                                <div style="margin-top: 12px;">
+                                                    <strong style="color: var(--text-primary); font-size: 0.9rem;">Follow-up Actions:</strong>
+                                                    <ul class="action-list" style="margin-top: 6px;">
+                                                        {% for a in case.ai_report.treatment.follow_up_actions %}
+                                                            <li>{{ a }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+
+                                    {% else %}
+                                        <p class="text-muted"><em>No AI report available</em></p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Doctor Review Section -->
+                            <div class="report-section">
+                                <div class="section-title">
+                                    <i class="fas fa-user-md"></i>Doctor Review
+                                </div>
+                                {% if case.doctor_review %}
+                                    <div class="report-box">
+                                        <div class="report-value" style="white-space: pre-wrap; margin-bottom: 16px;">
+                                            {{ case.doctor_review }}
+                                        </div>
+                                        {% if case.reviewed_at %}
+                                            <div style="padding-top: 12px; border-top: 1px solid #e5e7eb; margin-top: 12px;">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar-alt me-1"></i>
+                                                    Reviewed: {{ case.reviewed_at|date:"M d, Y g:i A" }}
+                                                </small>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <div class="report-box" style="text-align: center; padding: 32px 20px;">
+                                        <p class="text-muted" style="margin: 0;">
+                                            <i class="fas fa-clock me-2" style="color: #d1d5db;"></i>
+                                            Awaiting doctor review...
+                                        </p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Case Actions -->
+                        <div class="case-actions">
+                            <a href="{% url 'diagnoses:case_detail' case.id %}" class="btn btn-view-report">
+                                <i class="fas fa-file-pdf me-1"></i>View Full Report
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-reports">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-inbox"></i>
+                    </div>
+                    <p>No reports available yet. Your health reports will appear here once you submit a case.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -16,6 +16,167 @@ from .forms import PatientForm
 from diagnoses.models import Case, Notification
 from users.models import User
 
+from django.contrib.auth import get_user_model, login, authenticate
+from .forms import PatientSignupForm
+
+
+@login_required
+def patient_dashboard(request):
+    """Patient dashboard where a logged-in patient can view their cases and reports."""
+    # Only allow users with role PATIENT
+    if request.user.role != 'PATIENT':
+        messages.error(request, 'Access denied. This dashboard is for patients only.')
+        return render(request, 'error.html', {'error_code': '403'})
+
+    # Resolve the Patient record linked to this user
+    try:
+        patient = request.user.patient_profile
+    except Exception:
+        messages.error(request, 'No patient profile linked to this account. Contact admin.')
+        return render(request, 'error.html', {'error_code': '404'})
+
+    # Get cases for this patient
+    patient_cases = Case.objects.filter(patient=patient).select_related('nurse','doctor').order_by('-created_at')
+
+    # Prepare limited summary for each case: only the AI report produced by the nurse and the doctor review
+    import json
+    cases_summary = []
+    for c in patient_cases:
+        # Try to parse AI diagnosis if it's JSON, otherwise pass raw string
+        ai_report = None
+        if c.ai_diagnosis:
+            try:
+                ai_report = json.loads(c.ai_diagnosis)
+            except Exception:
+                ai_report = c.ai_diagnosis
+
+        cases_summary.append({
+            'id': c.id,
+            'created_at': c.created_at,
+            'ai_report': ai_report,
+            'doctor_review': c.doctor_review,
+            'reviewed_at': c.reviewed_at,
+            'nurse': c.nurse.get_full_name() if c.nurse else None,
+            'doctor': c.reviewed_by.get_full_name() if c.reviewed_by else None,
+        })
+
+    context = {
+        'patient': patient,
+        'cases': cases_summary,
+    }
+
+    # Notifications for the patient (unread count + recent items)
+    try:
+        unread_notifications_count = Notification.objects.filter(
+            recipient=request.user,
+            read_at__isnull=True
+        ).count()
+
+        recent_notifications = Notification.objects.filter(
+            recipient=request.user
+        ).order_by('-created_at')[:6]
+    except OperationalError:
+        unread_notifications_count = 0
+        recent_notifications = []
+
+    context.update({
+        'unread_notifications_count': unread_notifications_count,
+        'recent_notifications': recent_notifications,
+    })
+
+    return render(request, 'patient_dashboard.html', context)
+
+
+def patient_signup(request):
+    """Allow new patients to sign up and create a linked Patient record.
+
+    The form collects patient demographic fields plus username/password. On
+    success the user is logged in and redirected to their dashboard.
+    """
+    User = get_user_model()
+
+    if request.method == 'POST':
+        form = PatientSignupForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            username = data.get('username')
+            email = data.get('email')
+            password = data.get('password')
+
+            # Validate username is unique (don't accidentally reset existing user passwords)
+            if User.objects.filter(username=username).exists():
+                form.add_error('username', 'Username already taken. Please choose a different username or sign in.')
+                return render(request, 'registration/patient_signup.html', {'form': form})
+
+            # Before creating a User, validate patient matching so we don't create users when signup will be rejected.
+            phone = (data.get('phone_number') or '').strip()
+            existing_patient = None
+            if phone:
+                existing_patients_qs = Patient.objects.filter(phone_number=phone)
+                if existing_patients_qs.count() > 1:
+                    # Ambiguous: multiple patients share the same phone number.
+                    messages.error(request, 'Multiple patient records found with this phone number. Please contact support to link your account.')
+                    return render(request, 'registration/patient_signup.html', {'form': form})
+                existing_patient = existing_patients_qs.first()
+
+            # If no phone match, try to find a unique patient by name + dob
+            if not existing_patient:
+                dob = data.get('date_of_birth')
+                if dob:
+                    q = Patient.objects.filter(
+                        first_name=data.get('first_name', ''),
+                        last_name=data.get('last_name', ''),
+                        date_of_birth=dob
+                    )
+                    if q.count() == 1:
+                        existing_patient = q.first()
+                    elif q.count() > 1:
+                        messages.error(request, 'Multiple patient records found with the same name and date of birth. Please contact support.')
+                        return render(request, 'registration/patient_signup.html', {'form': form})
+
+            if existing_patient and existing_patient.user:
+                # A matching patient is already linked to an account; prevent creating another user.
+                messages.error(request, 'A patient account already linked to a user exists. If this is your account, please sign in or contact support.')
+                return render(request, 'registration/patient_signup.html', {'form': form})
+
+            # Create the user safely now that validation passed
+            user = User.objects.create_user(username=username, email=email or '', password=password)
+            user.first_name = data.get('first_name', '')
+            user.last_name = data.get('last_name', '')
+            user.role = 'PATIENT'
+            user.save()
+
+            # Link or create patient record
+            if existing_patient:
+                patient = existing_patient
+                patient.user = user
+                if phone:
+                    patient.phone_number = phone
+                patient.address = data.get('address', patient.address)
+                patient.medical_history = data.get('medical_history', patient.medical_history)
+                patient.allergies = data.get('allergies', patient.allergies)
+                patient.save()
+            else:
+                patient = Patient.objects.create(
+                    first_name=data.get('first_name', ''),
+                    last_name=data.get('last_name', ''),
+                    date_of_birth=data.get('date_of_birth'),
+                    gender=data.get('gender'),
+                    phone_number=phone or '',
+                    address=data.get('address', ''),
+                    medical_history=data.get('medical_history', ''),
+                    allergies=data.get('allergies', ''),
+                    user=user
+                )
+
+            # Do NOT auto-login for patients. Redirect to login to complete sign-in.
+            messages.success(request, 'Account created. Please sign in to access your dashboard.')
+            return redirect('login')
+    else:
+        form = PatientSignupForm()
+
+    return render(request, 'registration/patient_signup.html', {'form': form})
+
 
 class PatientListView(LoginRequiredMixin, ListView):
     """

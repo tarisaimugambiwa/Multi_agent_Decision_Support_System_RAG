@@ -28,16 +28,27 @@ class Patient(models.Model):
         blank=True,
         help_text='Patient residential address'
     )
-    medical_history = models.TextField(
-        blank=True,
-        help_text='Patient medical history and past conditions'
-    )
+
     allergies = models.TextField(
         blank=True,
         help_text='Known allergies and adverse reactions'
     )
+
+    medical_history = models.TextField(
+        blank=True,
+        help_text='Patient medical history and past conditions (free text)'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='patient_profile',
+        null=True,
+        blank=True,
+        help_text='Optional link to a User account for patient portal access'
+    )
     
     class Meta:
         ordering = ['last_name', 'first_name']
@@ -53,12 +64,6 @@ class Patient(models.Model):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
-    
-    def get_age(self):
-        """Calculate patient age based on date of birth."""
-        from datetime import date
-        today = date.today()
-        return today.year - self.date_of_birth.year - ((today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
 
 
 class MedicalRecord(models.Model):

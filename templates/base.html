@@ -14,12 +14,23 @@
     <!-- Custom CSS -->
     <style>
         :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
+            /* Brand palette requested by user */
+            --brand-900: #003082; /* (0,48,130) */
+            --brand-800: #003b9f; /* (0,59,159) */
+            --brand-700: #004ed4; /* (0,78,212) */
+            --brand-600: #0057ec; /* (0,87,236) */
+            --brand-500: #3781ff; /* (55,129,255) */
+
+            /* Map existing variables to the new brand scale */
+            --primary-color: var(--brand-900);
+            --secondary-color: var(--brand-700);
+            --accent-color: var(--brand-600);
+            --muted-accent: var(--brand-500);
+
             --success-color: #27ae60;
             --danger-color: #e74c3c;
             --warning-color: #f39c12;
-            --info-color: #16a085;
+            --info-color: var(--brand-600);
             --nurse-color: #e91e63;
             --doctor-color: #4caf50;
             --expert-color: #9c27b0;
@@ -43,8 +54,9 @@
         }
         
         .sidebar {
+            /* White sidebar as requested */
             min-height: calc(100vh - 76px);
-            background: linear-gradient(135deg, var(--primary-color) 0%, #34495e 100%);
+            background: #ffffff;
             padding: 20px 0;
             position: fixed;
             top: 76px;
@@ -53,13 +65,14 @@
             width: 240px;
             z-index: 1000;
             overflow-y: auto;
+            border-right: 1px solid #e9ecef;
         }
         .main-content {
             margin-left: 240px;
         }
-        
+
         .sidebar .nav-link {
-            color: #bdc3c7;
+            color: var(--primary-color);
             padding: 12px 20px;
             margin: 2px 8px;
             border-radius: 8px;
@@ -83,13 +96,13 @@
         }
         
         .sidebar .nav-section {
-            color: #95a5a6;
+            color: #6c757d;
             font-size: 0.85rem;
             font-weight: bold;
             text-transform: uppercase;
             padding: 20px 20px 10px 20px;
             margin-top: 15px;
-            border-top: 1px solid #34495e;
+            border-top: 1px solid #e9ecef;
         }
         
         .sidebar .nav-section:first-child {
@@ -125,7 +138,7 @@
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, var(--secondary-color) 0%, #2980b9 100%);
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--brand-600) 100%);
             border: none;
             border-radius: 8px;
             padding: 10px 20px;
@@ -133,7 +146,7 @@
         }
         
         .btn-primary:hover {
-            background: linear-gradient(135deg, #2980b9 0%, #21618c 100%);
+            background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-800) 100%);
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
@@ -162,7 +175,7 @@
         }
         
         .footer {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #34495e 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--brand-800) 100%);
             color: white;
             text-align: center;
             padding: 30px 0;
@@ -404,6 +417,15 @@
                                 </a>
                             </li>
                         
+                        <!-- PATIENT NAVIGATION (Minimal) -->
+                        {% elif user.role == 'PATIENT' %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/patients/dashboard/' %}active{% endif %}" href="{% url 'patients:patient_dashboard' %}">
+                                    <i class="fas fa-file-medical-alt"></i>
+                                    <span>My Reports</span>
+                                </a>
+                            </li>
+
                         <!-- EXPERT/ADMIN NAVIGATION (Full Access) -->
                         {% else %}
                             <!-- Dashboard -->

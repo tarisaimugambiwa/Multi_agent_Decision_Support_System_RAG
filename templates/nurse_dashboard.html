@@ -4,162 +4,186 @@
 
 {% block extra_css %}
 <style>
-    .dashboard-header {
-        background: linear-gradient(135deg, var(--nurse-color) 0%, #ad1457 100%);
-        color: white;
-        padding: 40px;
-        margin-bottom: 30px;
-        border-radius: 20px;
+    .dashboard-stats {
+        margin-bottom: 48px;
     }
     
-    .dashboard-stats {
-        margin-bottom: 30px;
+    .dashboard-header {
+        background: var(--brand-700);
+        color: white;
+        padding: 32px 40px;
+        margin-bottom: 40px;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0, 78, 212, 0.12);
+    }
+    
+    .dashboard-header h1 {
+        color: white;
+        font-size: 1.875rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+    
+    .dashboard-header p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.95rem;
+        margin: 0;
     }
     
     .stat-card {
-        background: white;
-        border-radius: 15px;
-        padding: 25px;
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 24px;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border: none;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(55, 129, 255, 0.12);
         height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--brand-700);
+        opacity: 0;
+        transition: opacity 0.3s ease;
     }
     
     .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+    }
+    
+    .stat-card:hover::before {
+        opacity: 1;
     }
     
     .stat-icon {
         font-size: 2.5rem;
-        margin-bottom: 15px;
+        margin-bottom: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        background: #f3f4f6;
+        border-radius: 10px;
     }
     
     .stat-number {
         font-size: 2rem;
-        font-weight: bold;
-        margin-bottom: 5px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: #1f2937;
     }
     
     .stat-label {
-        color: #6c757d;
-        font-size: 0.9rem;
+        color: #6b7280;
+        font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        font-weight: 500;
+    }
+    
+    .stat-card small {
+        display: block;
+        margin-top: 8px;
+        font-size: 0.8rem;
     }
     
     .cases-table {
-        background: white;
-        border-radius: 15px;
+        background: #ffffff;
+        border-radius: 12px;
         overflow: hidden;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e5e7eb;
     }
     
     .table-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        background: linear-gradient(135deg, var(--brand-700) 0%, var(--brand-600) 100%);
         color: white;
-        padding: 20px 25px;
+        padding: 20px 24px;
         margin: 0;
+        border: none;
+    }
+    
+    .table-header h4 {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
     }
     
     .table thead th {
-        background-color: #f8f9fa;
+        background-color: #f9fafb;
         border: none;
-        padding: 15px 12px;
+        padding: 14px 16px;
         font-weight: 600;
-        color: var(--primary-color);
+        color: #1f2937;
         text-transform: uppercase;
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         letter-spacing: 0.5px;
     }
     
     .table tbody td {
-        padding: 15px 12px;
-        border-top: 1px solid #e9ecef;
+        padding: 16px;
+        border-top: 1px solid #e5e7eb;
         vertical-align: middle;
+        color: #1f2937;
     }
     
     .table tbody tr:hover {
-        background-color: #f8f9fa;
+        background-color: #fafbff;
     }
     
     .priority-badge {
         padding: 6px 12px;
         border-radius: 20px;
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         font-weight: 600;
         text-transform: uppercase;
+        background: transparent;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        color: #1f2937;
     }
-    
-    .priority-critical {
-        background-color: #dc3545;
-        color: white;
-    }
-    
-    .priority-urgent {
-        background-color: #fd7e14;
-        color: white;
-    }
-    
-    .priority-high {
-        background-color: #ffc107;
-        color: #212529;
-    }
-    
-    .priority-medium {
-        background-color: #20c997;
-        color: white;
-    }
-    
-    .priority-low {
-        background-color: #6c757d;
-        color: white;
-    }
+
+    .priority-critical { border-color: rgba(220,53,69,0.15); color: #c82333; font-weight: 700; }
+    .priority-urgent { border-color: rgba(253,126,20,0.15); color: #d35400; }
+    .priority-high { border-color: rgba(255,193,7,0.15); color: #b8860b; }
+    .priority-medium { border-color: rgba(32,201,151,0.15); color: #138a6b; }
+    .priority-low { border-color: rgba(108,117,125,0.12); color: #6c757d; }
     
     .status-badge {
         padding: 6px 12px;
         border-radius: 20px;
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         font-weight: 600;
         text-transform: uppercase;
+        background: transparent;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        color: #1f2937;
     }
-    
-    .status-pending {
-        background-color: #6c757d;
-        color: white;
-    }
-    
-    .status-in-progress {
-        background-color: #007bff;
-        color: white;
-    }
-    
-    .status-doctor-review {
-        background-color: #fd7e14;
-        color: white;
-    }
-    
-    .status-completed {
-        background-color: #28a745;
-        color: white;
-    }
-    
-    .status-cancelled {
-        background-color: #dc3545;
-        color: white;
-    }
+
+    .status-pending { border-color: rgba(108,117,125,0.12); color: #6c757d; }
+    .status-in-progress { border-color: rgba(55,129,255,0.2); color: var(--brand-700); font-weight: 600; }
+    .status-doctor-review { border-color: rgba(253,126,20,0.16); color: #d35400; }
+    .status-completed { border-color: rgba(40,167,69,0.16); color: #28a745; font-weight: 600; }
+    .status-cancelled { border-color: rgba(220,53,69,0.12); color: #c82333; }
     
     .btn-outline-purple {
-        color: #667eea;
-        border-color: #667eea;
+        color: var(--brand-700);
+        border-color: var(--brand-700);
     }
     
     .btn-outline-purple:hover {
         color: white;
-        background-color: #667eea;
-        border-color: #667eea;
+        background-color: var(--brand-700);
+        border-color: var(--brand-700);
     }
     
     .action-buttons {
@@ -176,18 +200,19 @@
         transition: all 0.3s ease;
     }
     
+    /* keep buttons as the only solid colored elements */
     .btn-view {
-        background-color: #17a2b8;
+        background-color: var(--brand-700);
         color: white;
     }
     
     .btn-view:hover {
-        background-color: #138496;
+        background-color: var(--brand-600);
         color: white;
     }
     
     .btn-edit {
-        background-color: #ffc107;
+        background-color: #ffc107; /* keep edit as solid yellow */
         color: #212529;
     }
     
@@ -205,11 +230,11 @@
     }
     
     .new-diagnosis-section {
-        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-        border-radius: 15px;
-        padding: 40px;
+        background: #fbfdff;
+        border-radius: 12px;
+        padding: 32px;
         margin-bottom: 30px;
-        border: 2px solid rgba(233, 30, 99, 0.1);
+        border: 1px solid rgba(55,129,255,0.09);
     }
     .breadcrumb {
         background-color: transparent;
@@ -219,48 +244,54 @@
     }
     
     .btn-new-diagnosis {
-        background: linear-gradient(135deg, var(--nurse-color) 0%, #ad1457 100%);
+        background: linear-gradient(135deg, var(--brand-700) 0%, var(--brand-600) 100%);
         border: none;
         border-radius: 10px;
-        padding: 15px 30px;
-        font-size: 1.1rem;
+        padding: 12px 26px;
+        font-size: 1rem;
         font-weight: 600;
         color: white;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.4px;
     }
     
     .btn-new-diagnosis:hover {
-        background: linear-gradient(135deg, #ad1457 0%, #880e4f 100%);
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(233, 30, 99, 0.3);
+        box-shadow: 0 8px 18px rgba(55,129,255,0.12);
         color: white;
     }
     
     .empty-state {
         text-align: center;
         padding: 60px 20px;
-        color: #6c757d;
+        color: #6b7280;
     }
     
     .empty-state i {
         font-size: 4rem;
         margin-bottom: 20px;
-        opacity: 0.5;
+        opacity: 0.4;
+        color: var(--brand-700);
+    }
+    
+    .empty-state h4 {
+        color: #1f2937;
+        font-weight: 600;
     }
     
     .patient-avatar {
         width: 40px;
         height: 40px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--brand-700), var(--brand-900));
         display: inline-flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-weight: bold;
-        margin-right: 10px;
+        font-weight: 600;
+        margin-right: 12px;
+        font-size: 0.85rem;
     }
     
     .patient-info {
@@ -268,11 +299,17 @@
         align-items: center;
     }
     
-    .symptoms-text {
-        max-width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    .patient-info > div:last-child {
+        flex: 1;
+    }
+    
+    .patient-info .fw-bold {
+        color: #1f2937;
+        font-size: 0.95rem;
+    }
+    
+    .patient-info small {
+        color: #6b7280;
     }
     
     .quick-filters {
@@ -294,16 +331,24 @@
     }
     
     @media (max-width: 768px) {
+        .dashboard-header {
+            padding: 24px 20px;
+        }
+        
+        .dashboard-header h1 {
+            font-size: 1.5rem;
+        }
+        
         .action-buttons {
             flex-direction: column;
         }
         
         .btn-action {
-            margin-bottom: 5px;
+            margin-bottom: 0;
         }
         
         .symptoms-text {
-            max-width: 150px;
+            max-width: 120px;
         }
         
         .patient-info {
@@ -312,7 +357,8 @@
         }
         
         .patient-avatar {
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            margin-right: 0;
         }
     }
 </style>

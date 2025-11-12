@@ -932,6 +932,22 @@ def submit_doctor_review(request, case_id):
                     target_case=case,
                     link=reverse('diagnoses:case_detail', args=[case.id])
                 )
+            
+            # Also notify the patient (if they have a linked User account)
+            try:
+                patient_user = getattr(case.patient, 'user', None)
+                if patient_user:
+                    Notification.objects.create(
+                        recipient=patient_user,
+                        actor=request.user,
+                        verb=f"Your report has been reviewed: Case #{case.id}",
+                        description=(doctor_review[:500] + '...') if len(doctor_review) > 500 else doctor_review,
+                        target_case=case,
+                        link=reverse('diagnoses:case_detail', args=[case.id])
+                    )
+            except Exception as _pe:
+                # Non-fatal: log and continue
+                print(f"Failed to create patient notification: {_pe}")
         except Exception as _e:
             # Non-fatal: log and continue
             print(f"Failed to create notification: {_e}")

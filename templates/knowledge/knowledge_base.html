@@ -5,116 +5,192 @@
 {% block extra_css %}
 <style>
     .knowledge-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--brand-700);
         color: white;
-        padding: 40px;
-        border-radius: 15px;
-        margin-bottom: 30px;
+        padding: 48px 40px;
+        border-radius: 12px;
+        margin-bottom: 40px;
+        box-shadow: 0 4px 12px rgba(0, 80, 212, 0.15);
+    }
+    
+    .knowledge-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+    }
+    
+    .knowledge-header p {
+        font-size: 1rem;
+        opacity: 0.95;
+        margin: 0;
     }
     
     .stat-card {
         background: white;
         border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 28px;
+        border: 1px solid rgba(55, 129, 255, 0.12);
         transition: all 0.3s ease;
-        border-left: 4px solid #667eea;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--brand-700);
+        opacity: 0;
+        transition: opacity 0.3s ease;
     }
     
     .stat-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        border-color: rgba(55, 129, 255, 0.25);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 80, 212, 0.12);
+    }
+    
+    .stat-card:hover::before {
+        opacity: 1;
     }
     
     .stat-number {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
         font-weight: 700;
-        color: #667eea;
-        margin-bottom: 5px;
+        color: var(--brand-700);
+        margin-bottom: 8px;
     }
     
     .stat-label {
-        color: #6c757d;
-        font-size: 0.95rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
         font-weight: 600;
     }
     
     .action-card {
         background: white;
         border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 32px 24px;
+        border: 1px solid rgba(55, 129, 255, 0.12);
         height: 100%;
         transition: all 0.3s ease;
-        border: 2px solid transparent;
+        text-align: center;
     }
     
     .action-card:hover {
-        border-color: #667eea;
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        border-color: rgba(55, 129, 255, 0.35);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 28px rgba(0, 80, 212, 0.15);
     }
     
     .action-icon {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
+        width: 80px;
+        height: 80px;
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 2rem;
-        margin-bottom: 20px;
+        font-size: 2.2rem;
+        margin: 0 auto 24px;
+        background: rgba(55, 129, 255, 0.08);
+        color: var(--brand-700);
     }
     
-    .icon-purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-    .icon-blue { background: linear-gradient(135deg, #2196F3 0%, #1976d2 100%); color: white; }
-    .icon-green { background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; }
-    .icon-orange { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; }
+    .action-card h5 {
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+    
+    .action-card p {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
     
     .recent-doc {
         background: white;
         border-radius: 8px;
-        padding: 15px;
+        padding: 16px;
         margin-bottom: 12px;
-        border-left: 3px solid #667eea;
+        border: 1px solid var(--border-color);
         transition: all 0.2s ease;
     }
     
     .recent-doc:hover {
-        background: #f8f9fa;
-        transform: translateX(5px);
+        border-color: rgba(55, 129, 255, 0.25);
+        background: #f8fafb;
+        transform: translateX(4px);
     }
     
-    .doc-type-badge {
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
+    .recent-doc a {
+        color: var(--brand-700);
+        text-decoration: none;
         font-weight: 600;
     }
     
-    .type-guideline { background: #e3f2fd; color: #1976d2; }
-    .type-protocol { background: #f3e5f5; color: #7b1fa2; }
-    .type-research { background: #e8f5e9; color: #2e7d32; }
-    .type-manual { background: #fff3e0; color: #ef6c00; }
-    .type-other { background: #f5f5f5; color: #616161; }
+    .recent-doc a:hover {
+        color: var(--brand-600);
+    }
+    
+    .doc-type-badge {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        border: 1px solid;
+        background: transparent;
+    }
+    
+    .type-guideline { border-color: var(--brand-700); color: var(--brand-700); }
+    .type-protocol { border-color: #8b5cf6; color: #8b5cf6; }
+    .type-research { border-color: #10b981; color: #10b981; }
+    .type-manual { border-color: #f59e0b; color: #f59e0b; }
+    .type-other { border-color: var(--text-secondary); color: var(--text-secondary); }
     
     .status-indicator {
         display: inline-flex;
         align-items: center;
         padding: 6px 12px;
-        border-radius: 20px;
+        border-radius: 6px;
         font-size: 0.85rem;
         font-weight: 600;
+        border: 1px solid;
+        background: transparent;
     }
     
     .status-active {
-        background: #d4edda;
-        color: #155724;
+        border-color: #10b981;
+        color: #10b981;
     }
     
     .status-warning {
-        background: #fff3cd;
-        color: #856404;
+        border-color: #f59e0b;
+        color: #f59e0b;
+    }
+    
+    .btn-outline-primary {
+        color: var(--brand-700);
+        border-color: var(--brand-700);
+        border-width: 1px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-outline-primary:hover {
+        background: var(--brand-700);
+        border-color: var(--brand-700);
+        color: white;
+        transform: scale(1.02);
+    }
+    
+    h3 {
+        color: var(--text-primary);
+        font-weight: 700;
+        margin-bottom: 20px !important;
+        font-size: 1.35rem;
     }
 </style>
 {% endblock %}

@@ -169,6 +169,8 @@ class RoleBasedLoginView(BaseLoginView):
             return '/nurse-dashboard/'
         elif user.role == 'DOCTOR':
             return '/doctor-dashboard/'
+        elif user.role == 'PATIENT':
+            return '/patients/dashboard/'
         else:
             return '/'  # Expert and other roles go to home
 

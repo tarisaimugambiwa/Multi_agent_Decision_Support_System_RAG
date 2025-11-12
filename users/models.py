@@ -9,6 +9,7 @@ class User(AbstractUser):
         ('NURSE', 'Nurse'),
         ('DOCTOR', 'Doctor'),
         ('EXPERT', 'Expert'),
+        ('PATIENT', 'Patient'),
     ]
     
     role = models.CharField(

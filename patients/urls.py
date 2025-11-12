@@ -32,4 +32,8 @@ urlpatterns = [
     path('api/recent/', views.recent_patients_api, name='recent_patients_api'),
     path('api/<int:patient_id>/detail/', views.patient_detail_api, name='patient_detail_api'),
     path('api/stats/', views.dashboard_stats_api, name='dashboard_stats_api'),
+    # Patient portal
+    path('dashboard/', views.patient_dashboard, name='patient_dashboard'),
+    # Patient signup (self-registration)
+    path('signup/', views.patient_signup, name='patient_signup'),
 ]
