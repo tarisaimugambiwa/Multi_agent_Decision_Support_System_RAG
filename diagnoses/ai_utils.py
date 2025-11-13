@@ -1,5 +1,5 @@
 """
-AI Diagnosis utilities for Medical AI System
+AI Diagnosis utilities for Alera Healthcare System
 Provides intelligent diagnostic suggestions using RAG and rule-based reasoning
 """
 
