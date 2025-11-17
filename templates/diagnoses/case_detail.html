@@ -266,9 +266,24 @@
                     <i class="fas fa-stethoscope"></i>Chief Complaints & Symptoms
                 </h3>
                 
-                <!-- Symptom Picture (if uploaded) -->
+                <!-- Symptoms Description -->
+                <p class="lead">{{ case.symptoms }}</p>
+                
+                {% if case.vital_signs %}
+                <div class="mt-3">
+                    <strong>Vital Signs:</strong><br>
+                    {% for key, value in case.vital_signs.items %}
+                        <span class="vital-sign">
+                            <i class="fas fa-heartbeat me-1"></i>
+                            {{ key|title }}: {{ value }}
+                        </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <!-- Symptom Picture (if uploaded) - Below Symptoms -->
                 {% if case.symptom_image %}
-                <div class="mb-4">
+                <div class="mb-4 mt-4">
                     <div class="card">
                         <div class="card-header bg-info text-white">
                             <h6 class="mb-0">
@@ -287,21 +302,6 @@
                             {% endif %}
                         </div>
                     </div>
-                </div>
-                {% endif %}
-                
-                <!-- Symptoms Description -->
-                <p class="lead">{{ case.symptoms }}</p>
-                
-                {% if case.vital_signs %}
-                <div class="mt-3">
-                    <strong>Vital Signs:</strong><br>
-                    {% for key, value in case.vital_signs.items %}
-                        <span class="vital-sign">
-                            <i class="fas fa-heartbeat me-1"></i>
-                            {{ key|title }}: {{ value }}
-                        </span>
-                    {% endfor %}
                 </div>
                 {% endif %}
             </div>

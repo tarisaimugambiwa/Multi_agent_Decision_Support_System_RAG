@@ -13,7 +13,7 @@
 
     <div class="row">
         <div class="col-lg-8">
-            <form method="post" class="needs-validation" novalidate>
+            <form method="post" class="needs-validation" novalidate enctype="multipart/form-data">
                 {% csrf_token %}
                 
                 <!-- Patient Selection Card -->
@@ -52,6 +52,23 @@
                             <small class="form-text text-muted">Optional: {"temperature": 37.5, "heart_rate": 72, "blood_pressure": "120/80"} (Temperature in °C)</small>
                             {% if form.vital_signs.errors %}
                                 <div class="text-danger small mt-1">{{ form.vital_signs.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.symptom_image_file.id_for_label }}" class="form-label">
+                                <i class="fas fa-image me-2"></i>Symptom Image (Optional)
+                            </label>
+                            {{ form.symptom_image_file }}
+                            <div id="imagePreview" class="mt-2" style="display: none;">
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <strong>Image selected:</strong> <span id="imageName"></span>
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">Upload an image showing the patient's symptoms (JPG, PNG, max 10MB)</small>
+                            {% if form.symptom_image_file.errors %}
+                                <div class="text-danger small mt-1">{{ form.symptom_image_file.errors }}</div>
                             {% endif %}
                         </div>
                     </div>
@@ -152,4 +169,24 @@
         font-weight: 600;
     }
 </style>
+
+<script>
+    // Show image preview when file is selected
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('{{ form.symptom_image_file.id_for_label }}');
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                const preview = document.getElementById('imagePreview');
+                const fileName = document.getElementById('imageName');
+                
+                if (this.files && this.files[0]) {
+                    fileName.textContent = this.files[0].name;
+                    preview.style.display = 'block';
+                } else {
+                    preview.style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

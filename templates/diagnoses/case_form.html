@@ -57,7 +57,7 @@
                         <p class="mb-0">Our AI system will analyze the symptoms and patient history to provide diagnostic suggestions and determine case urgency automatically.</p>
                     </div>
 
-                    <form method="post" id="case-form">
+                    <form method="post" id="case-form" enctype="multipart/form-data">
                         {% csrf_token %}
                         
                         <!-- Patient Selection -->
@@ -109,7 +109,7 @@
                                     <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
                                     <p class="mb-2"><strong>Click to upload or drag and drop</strong></p>
                                     <p class="text-muted small">PNG, JPG, GIF up to 10MB</p>
-                                    <input type="file" id="symptom_image" name="symptom_image" accept="image/*" style="display: none;" class="form-control">
+                                    <input type="file" id="symptom_image_file" name="symptom_image_file" accept="image/*" style="display: none;" class="form-control">
                                 </div>
                                 
                                 <!-- Image Preview -->
@@ -413,7 +413,7 @@ $(document).ready(function() {
 
     // Image Upload Functionality
     const imageDropZone = document.getElementById('imageDropZone');
-    const imageInput = document.getElementById('symptom_image');
+    const imageInput = document.getElementById('symptom_image_file');
     const imagePreviewContainer = document.getElementById('imagePreviewContainer');
     const imagePreview = document.getElementById('imagePreview');
     const fileName = document.getElementById('fileName');
@@ -490,7 +490,7 @@ $(document).ready(function() {
 // Clear Image Upload Function - Outside of ready() so it's accessible from HTML onclick
 function clearImageUpload() {
     // Get references to DOM elements
-    const imageInput = document.getElementById('symptom_image');
+    const imageInput = document.getElementById('symptom_image_file');
     const imagePreviewContainer = document.getElementById('imagePreviewContainer');
     const imagePreview = document.getElementById('imagePreview');
     const fileName = document.getElementById('fileName');

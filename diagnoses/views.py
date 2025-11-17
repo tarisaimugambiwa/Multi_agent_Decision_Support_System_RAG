@@ -86,9 +86,12 @@ class CaseForm(ModelForm):
             image_data = symptom_image.read()
             base64_image = base64.b64encode(image_data).decode('utf-8')
             
-            # Store the base64 string and filename
-            self.cleaned_data['symptom_image_base64'] = base64_image
-            self.cleaned_data['symptom_image_filename'] = symptom_image.name
+            # Store the base64 string and filename in a way that persists
+            self.base64_image_data = base64_image
+            self.base64_image_filename = symptom_image.name
+            
+            # Reset file pointer in case it's needed again
+            symptom_image.seek(0)
             
         return symptom_image
 
@@ -145,26 +148,18 @@ class CaseCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         Process form and generate AI diagnosis using Multi-Agent System.
         """
         try:
-            # Set the nurse (current user)
-            form.instance.nurse = self.request.user
-            
             # Get patient and symptoms from form
             patient = form.cleaned_data['patient']
             symptoms = form.cleaned_data['symptoms']
             vital_signs = form.cleaned_data.get('vital_signs', {})
             
-            # Save the case first (to get an ID)
+            # Save the case with commit=False to get instance with image
             self.object = form.save(commit=False)
             
-            # Handle symptom image - convert to base64
-            if form.cleaned_data.get('symptom_image'):
-                base64_image = form.cleaned_data.get('symptom_image_base64')
-                filename = form.cleaned_data.get('symptom_image_filename')
-                
-                if base64_image:
-                    self.object.symptom_image = base64_image
-                    self.object.symptom_image_filename = filename
+            # Now set the nurse
+            self.object.nurse = self.request.user
             
+            # Save to database
             self.object.save()
             
             # ===== MULTI-AGENT SYSTEM WORKFLOW =====
