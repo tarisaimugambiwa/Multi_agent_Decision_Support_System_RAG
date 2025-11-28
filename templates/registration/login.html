@@ -15,7 +15,7 @@
     <!-- Custom CSS -->
 <style>
     body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #fafafa 0%, #f4f4f5 100%);
         background-size: 400% 400%;
         animation: gradientShift 15s ease infinite;
         min-height: 100vh;
@@ -42,6 +42,7 @@
         border-radius: 20px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         overflow: hidden;
+        display: flex;
     }
     
     .login-form-section {
@@ -57,14 +58,14 @@
         width: 80px;
         height: 80px;
         margin: 0 auto 20px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #e4e4e7 0%, #d4d4d8 100%);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
+        color: #3f3f46;
         font-size: 2.5rem;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     }
     
     .login-header h1 {
@@ -85,6 +86,9 @@
     
     .form-group {
         margin-bottom: 20px;
+        max-width: 450px;
+        margin-left: auto;
+        margin-right: auto;
     }
     
     .form-floating {
@@ -99,8 +103,8 @@
     }
     
     .form-floating input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        border-color: #a1a1aa;
+        box-shadow: 0 0 0 0.2rem rgba(161, 161, 170, 0.25);
     }
     
     .form-floating label {
@@ -108,12 +112,15 @@
     }
     
     .btn-login {
-        width: 100%;
+        width: 90%;
+        max-width: 400px;
+        margin: 0 auto;
+        display: block;
         padding: 15px;
         font-size: 1.1rem;
         font-weight: 600;
         border-radius: 10px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #004ed4 0%, #0057ec 100%);
         border: none;
         color: white;
         transition: transform 0.2s, box-shadow 0.2s;
@@ -121,7 +128,7 @@
     
     .btn-login:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 10px 25px rgba(0, 78, 212, 0.4);
     }
     
     .demo-credentials {
@@ -132,7 +139,7 @@
     }
     
     .demo-credentials h6 {
-        color: #667eea;
+        color: #3f3f46;
         font-weight: 700;
         margin-bottom: 20px;
         text-align: center;
@@ -144,7 +151,7 @@
         border-radius: 10px;
         padding: 15px 20px;
         margin-bottom: 15px;
-        border-left: 4px solid #667eea;
+        border-left: 4px solid #a1a1aa;
         cursor: pointer;
         transition: all 0.3s;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -152,7 +159,7 @@
     
     .credential-box:hover {
         transform: translateX(5px);
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
     
     .credential-box.nurse {
@@ -208,18 +215,18 @@
         text-align: center;
         margin-top: 25px;
         padding: 15px;
-        background: rgba(102, 126, 234, 0.1);
+        background: rgba(244, 244, 245, 0.5);
         border-radius: 10px;
     }
     
     .security-note i {
-        color: #667eea;
+        color: #71717a;
         margin-right: 8px;
     }
     
     .form-floating .form-control:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        border-color: #a1a1aa;
+        box-shadow: 0 0 0 0.2rem rgba(161, 161, 170, 0.25);
     }
     
     .form-floating label {
@@ -228,7 +235,7 @@
     }
     
     .btn-login {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #004ed4 0%, #0057ec 100%);
         border: none;
         border-radius: 10px;
         padding: 15px;
@@ -237,13 +244,17 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
         transition: all 0.3s ease;
-        width: 100%;
+        width: 90%;
+        max-width: 400px;
+        margin: 0 auto;
+        display: block;
+        color: white;
     }
     
     .btn-login:hover {
-        background: linear-gradient(135deg, #5568d3 0%, #6741a1 100%);
+        background: linear-gradient(135deg, #003bb3 0%, #0047d4 100%);
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 8px 20px rgba(0, 78, 212, 0.4);
     }
     
     .login-footer {
@@ -325,18 +336,17 @@
     .login-image-section {
         height: 100%;
         display: flex;
-        align-items: center;
+        align-items: stretch;
         justify-content: center;
-        padding: 40px;
+        padding: 0;
         background: rgba(255, 255, 255, 0.05);
     }
     
     .login-image-section img {
-        max-width: 100%;
-        height: auto;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        width: 100%;
+        height: 100%;
         object-fit: cover;
+        border-radius: 0;
     }
     
     @media (max-width: 991px) {
