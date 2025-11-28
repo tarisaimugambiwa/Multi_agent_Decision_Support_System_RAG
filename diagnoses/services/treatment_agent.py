@@ -133,7 +133,7 @@ class TreatmentAgent:
         allergies: List[str] = None
     ) -> Dict[str, Any]:
         """
-        Generate evidence-based medication recommendations from WHO Essential Medicines List.
+        Generate evidence-based medication recommendations from comprehensive WHO/Uganda Clinical Guidelines database.
         
         Args:
             diagnosis: Diagnosis information
@@ -146,30 +146,55 @@ class TreatmentAgent:
         """
         logger.info(f"Generating evidence-based medication recommendations for: {diagnosis.get('primary_diagnosis', 'unknown')}")
         
-        primary_diagnosis = diagnosis.get('primary_diagnosis', '').lower()
+        primary_diagnosis = diagnosis.get('primary_diagnosis', '')
+        vital_signs = diagnosis.get('vital_signs', {})
         
-        # Query knowledge base for medication recommendations
-        medication_guidelines = self._query_medication_guidelines(primary_diagnosis, symptoms or [])
-        
-        # Extract medications from guidelines
-        medications = self._extract_medications_from_guidelines(medication_guidelines)
-        
-        # Filter based on allergies
-        if allergies:
-            medications = self._filter_by_allergies(medications, allergies)
-        
-        # Add evidence sources
-        medication_plan = {
-            'timestamp': datetime.now().isoformat(),
-            'primary_medications': medications[:3],  # Top 3
-            'alternative_medications': medications[3:6] if len(medications) > 3 else [],
-            'evidence_sources': medication_guidelines.get('sources', []),
-            'allergy_warnings': allergies if allergies else [],
-            'pharmacist_consultation_required': len(medications) > 0,
-            'knowledge_base_used': medication_guidelines.get('knowledge_base_used', False)
-        }
-        
-        return medication_plan
+        # Use comprehensive medication database
+        try:
+            from diagnoses.medication_database import (
+                get_medication_by_diagnosis,
+                determine_severity_from_vitals,
+                MEDICATION_DATABASE
+            )
+            
+            # Determine severity from vital signs and symptoms
+            severity = determine_severity_from_vitals(vital_signs, ' '.join(symptoms or []))
+            
+            # Get medications from comprehensive database
+            medication_data = get_medication_by_diagnosis(
+                primary_diagnosis,
+                severity=severity,
+                age_group='adult',  # Can be enhanced with patient age
+                special_conditions=allergies
+            )
+            
+            # Filter based on allergies if provided
+            primary_meds = medication_data.get('primary_medications', [])
+            if allergies:
+                primary_meds = self._filter_by_allergies(primary_meds, allergies)
+            
+            medication_plan = {
+                'timestamp': datetime.now().isoformat(),
+                'primary_medications': primary_meds,
+                'supportive_care': medication_data.get('supportive_care', []),
+                'lifestyle_recommendations': medication_data.get('lifestyle', []),
+                'prevention_measures': medication_data.get('prevention', []),
+                'monitoring_required': medication_data.get('monitoring', []),
+                'severity_assessed': severity,
+                'evidence_sources': ['WHO Guidelines 2023', 'Uganda Clinical Guidelines', 'IDSA Guidelines'],
+                'allergy_warnings': allergies if allergies else [],
+                'pharmacist_consultation_required': len(primary_meds) > 0,
+                'database_used': 'Comprehensive WHO/Uganda Clinical Guidelines Database'
+            }
+            
+            logger.info(f"Retrieved {len(primary_meds)} medications from comprehensive database for {primary_diagnosis} ({severity} severity)")
+            
+            return medication_plan
+            
+        except ImportError as e:
+            logger.error(f"Medication database import error: {e}")
+            # Fallback to old method
+            return self._fallback_medication_recommendations(diagnosis, symptoms, allergies)
     
     def _query_medication_guidelines(self, diagnosis: str, symptoms: List[str]) -> Dict[str, Any]:
         """
@@ -277,8 +302,8 @@ class TreatmentAgent:
         diagnosis: Dict
     ) -> Dict[str, List[str]]:
         """
-        Generate clean, actionable steps based on urgency level and diagnosis.
-        Keep it simple and practical for nurses and healthcare workers.
+        Generate concise, diagnosis-specific action steps.
+        Keep it brief and practical for healthcare workers.
         """
         immediate = []
         short_term = []
@@ -286,97 +311,137 @@ class TreatmentAgent:
         
         primary_diagnosis = diagnosis.get('primary_diagnosis', '').lower()
         
-        # Generate standard clinical actions based on urgency
-        if urgency_level.upper() == 'CRITICAL':
+        # Diagnosis-specific actions
+        if 'typhoid' in primary_diagnosis:
             immediate = [
-                '🚨 CALL EMERGENCY SERVICES IMMEDIATELY OR TRANSPORT TO EMERGENCY DEPARTMENT',
-                'Monitor vital signs continuously (blood pressure, heart rate, respiratory rate, oxygen saturation)',
-                'Keep patient calm, reassure them, and position comfortably',
-                'Ensure airway is clear and patient is breathing adequately',
-                'Do not give anything by mouth until evaluated by physician',
-                'Have patient\'s medical history and current medications ready for emergency team'
+                'Start antibiotics immediately (Ceftriaxone or Azithromycin)',
+                'Ensure adequate hydration - drink 8-10 glasses of water daily',
+                'Bed rest essential'
             ]
             short_term = [
-                'Prepare for immediate hospital admission and emergency treatment',
-                'Emergency physician will order diagnostic tests and imaging as needed',
-                'IV access and emergency medications will be administered as needed',
-                'Continuous monitoring in emergency department or ICU'
+                'Take prescribed antibiotics for full course (7-14 days)',
+                'Soft diet - avoid spicy, fatty foods',
+                'Monitor for complications: severe abdominal pain, bleeding'
             ]
             follow_up = [
-                'Follow all discharge instructions from emergency department',
-                'Attend all follow-up appointments as scheduled',
-                'Watch for warning signs and return immediately if condition worsens'
+                'Blood culture after treatment to confirm clearance',
+                'Follow-up in 7 days',
+                'Typhoid vaccine after recovery'
             ]
-            
+        elif 'meningitis' in primary_diagnosis:
+            immediate = [
+                '🚨 EMERGENCY - Immediate hospitalization required',
+                'Start IV antibiotics within 30 minutes',
+                'Lumbar puncture for diagnosis'
+            ]
+            short_term = [
+                'ICU monitoring',
+                'IV antibiotics for 10-14 days',
+                'Manage fever and headache'
+            ]
+            follow_up = [
+                'Hearing test after recovery',
+                'Neurological follow-up',
+                'Contact prophylaxis for close contacts'
+            ]
+        elif 'malaria' in primary_diagnosis:
+            immediate = [
+                'Start antimalarial treatment immediately (ACT)',
+                'Rest and stay hydrated',
+                'Monitor temperature every 4 hours'
+            ]
+            short_term = [
+                'Complete 3-day ACT course',
+                'Check for symptom improvement by Day 3',
+                'Avoid mosquito bites'
+            ]
+            follow_up = [
+                'Recheck if fever persists after 3 days',
+                'Use insecticide-treated bed nets',
+                'Follow-up in 1 week'
+            ]
+        elif 'pneumonia' in primary_diagnosis:
+            immediate = [
+                'Start antibiotics immediately',
+                'Rest and adequate hydration',
+                'Monitor breathing and oxygen levels'
+            ]
+            short_term = [
+                'Complete antibiotic course (5-10 days)',
+                'Chest physiotherapy if needed',
+                'Monitor for improvement in 48-72 hours'
+            ]
+            follow_up = [
+                'Chest X-ray if not improving',
+                'Follow-up in 5-7 days',
+                'Pneumococcal vaccine if eligible'
+            ]
+        elif 'gastroenteritis' in primary_diagnosis or 'diarrhea' in primary_diagnosis:
+            immediate = [
+                'Start Oral Rehydration Solution (ORS) immediately',
+                'Zinc supplementation if child <5 years',
+                'Continue normal feeding'
+            ]
+            short_term = [
+                'Monitor hydration status',
+                'Antibiotics ONLY if blood in stool',
+                'Avoid anti-diarrheal medications in children'
+            ]
+            follow_up = [
+                'Recheck if diarrhea persists >7 days',
+                'Monitor for dehydration signs',
+                'Hygiene education'
+            ]
+        elif urgency_level.upper() == 'CRITICAL':
+            immediate = [
+                '🚨 CALL EMERGENCY SERVICES IMMEDIATELY',
+                'Monitor vital signs continuously',
+                'Keep patient calm and comfortable'
+            ]
+            short_term = [
+                'Emergency department evaluation',
+                'Diagnostic tests as ordered',
+                'Hospital admission if needed'
+            ]
+            follow_up = [
+                'Follow discharge instructions',
+                'Scheduled follow-up appointments'
+            ]
         elif urgency_level.upper() == 'HIGH':
             immediate = [
-                '⚠️ Seek urgent medical evaluation within 2-4 hours at urgent care or emergency department',
-                'Monitor vital signs: temperature, blood pressure, heart rate, respiratory rate',
-                'Document all symptoms, their severity, and any changes',
-                'Have patient rest and avoid strenuous physical activity',
-                'Keep patient hydrated with water or clear fluids',
-                'Gather medical records and list of current medications'
+                'Seek medical evaluation within 2-4 hours',
+                'Monitor symptoms closely',
+                'Rest and maintain hydration'
             ]
             short_term = [
-                'Healthcare provider will conduct physical examination and diagnostic tests',
-                'Treatment plan will be prescribed based on clinical findings',
-                'Follow all medication instructions precisely as prescribed',
-                'Monitor for side effects and report any concerns to healthcare provider',
-                'Maintain adequate rest, hydration, and nutrition'
+                'Follow prescribed treatment plan',
+                'Take medications as directed',
+                'Monitor for improvement'
             ]
             follow_up = [
-                'Schedule follow-up appointment within 3-5 days or as directed by physician',
-                'Report immediately if symptoms worsen or new symptoms develop',
-                'Keep symptom diary noting changes, severity, and timing',
-                'Complete all prescribed medications even if feeling better'
+                'Follow-up in 3-5 days',
+                'Return if symptoms worsen'
             ]
-            
-        elif urgency_level.upper() == 'MODERATE':
+        else:  # MODERATE/ROUTINE
             immediate = [
-                'Schedule medical consultation within 24-48 hours',
-                'Monitor symptoms and note any changes or progression',
-                'Maintain normal hydration - drink adequate fluids',
-                'Get adequate rest to support body\'s healing process',
-                'Take over-the-counter pain relief if needed (as per package directions)'
+                'Schedule appointment within 24-48 hours',
+                'Monitor symptoms',
+                'Maintain hydration and rest'
             ]
             short_term = [
-                'Healthcare provider will evaluate condition and prescribe appropriate treatment',
-                'Follow treatment plan and medication schedule as prescribed',
-                'Maintain good nutrition to support recovery',
-                'Monitor temperature and other vital signs if advised',
-                'Continue regular daily activities as tolerated'
+                'Follow treatment recommendations',
+                'Take prescribed medications',
+                'Monitor for changes'
             ]
             follow_up = [
-                'Follow-up appointment in 5-7 days or as directed',
-                'Contact healthcare provider if symptoms persist beyond expected timeline',
-                'Report any new or worsening symptoms promptly',
-                'Complete prescribed treatment course fully'
-            ]
-            
-        else:  # ROUTINE
-            immediate = [
-                'Schedule routine medical consultation within 1-2 weeks',
-                'Monitor and document symptoms for discussion with healthcare provider',
-                'Maintain healthy lifestyle: adequate hydration, balanced diet, regular sleep',
-                'Continue normal daily activities unless symptoms worsen'
-            ]
-            short_term = [
-                'Healthcare provider will conduct evaluation during scheduled visit',
-                'Discuss all symptoms, concerns, and medical history thoroughly',
-                'Follow any treatment recommendations or lifestyle modifications advised',
-                'Take prescribed medications as directed'
-            ]
-            follow_up = [
-                'Attend follow-up appointments as scheduled',
-                'Monitor for any changes in symptoms or condition',
-                'Maintain communication with healthcare provider as needed',
-                'Continue preventive health measures and healthy lifestyle'
+                'Follow-up as recommended',
+                'Complete treatment course'
             ]
         
         return {
-            'immediate': immediate,
-            'short_term': short_term,
-            'follow_up': follow_up[:8]
+            'immediate': immediate[:3],  # Limit to 3 items
+            'short_term': short_term[:3],  # Limit to 3 items
+            'follow_up': follow_up[:3]  # Limit to 3 items
         }
     
     def suggest_tests_and_referrals(
@@ -659,13 +724,55 @@ class TreatmentAgent:
         allergies_lower = [a.lower() for a in allergies]
         
         for med in medications:
-            med_name_lower = med['name'].lower()
-            if not any(allergy in med_name_lower for allergy in allergies_lower):
-                filtered.append(med)
-            else:
-                logger.warning(f"Filtered out {med['name']} due to allergy")
+            med_name_lower = med.get('name', '').lower()
+            
+            # Check contraindications field as well
+            contraindications = med.get('contraindications', '').lower()
+            
+            # Filter if medication name contains allergy term
+            if any(allergy in med_name_lower for allergy in allergies_lower):
+                logger.warning(f"Filtered out {med.get('name')} due to allergy in medication name")
+                continue
+            
+            # Filter if allergy is in contraindications
+            if any(allergy in contraindications for allergy in allergies_lower):
+                logger.warning(f"Filtered out {med.get('name')} due to allergy in contraindications")
+                continue
+            
+            filtered.append(med)
         
         return filtered
+    
+    def _fallback_medication_recommendations(self, diagnosis: Dict, symptoms: List[str], allergies: List[str]) -> Dict[str, Any]:
+        """Fallback method if medication database import fails."""
+        logger.warning("Using fallback medication recommendations")
+        
+        # Query knowledge base for medication recommendations
+        medication_guidelines = self._query_medication_guidelines(
+            diagnosis.get('primary_diagnosis', '').lower(), 
+            symptoms or []
+        )
+        
+        # Extract medications from guidelines
+        medications = self._extract_medications_from_guidelines(medication_guidelines)
+        
+        # Filter based on allergies
+        if allergies:
+            medications = self._filter_by_allergies(medications, allergies)
+        
+        # Add evidence sources
+        medication_plan = {
+            'timestamp': datetime.now().isoformat(),
+            'primary_medications': medications[:3],  # Top 3
+            'alternative_medications': medications[3:6] if len(medications) > 3 else [],
+            'evidence_sources': medication_guidelines.get('sources', []),
+            'allergy_warnings': allergies if allergies else [],
+            'pharmacist_consultation_required': len(medications) > 0,
+            'knowledge_base_used': medication_guidelines.get('knowledge_base_used', False),
+            'database_used': 'Fallback RAG Method'
+        }
+        
+        return medication_plan
     
     def _get_medication_contraindications(self, medication: str, patient_history: Dict = None) -> List[str]:
         """Get contraindications for medication."""

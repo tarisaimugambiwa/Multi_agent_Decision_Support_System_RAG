@@ -272,7 +272,30 @@ class DiagnosisAgent:
                 # Extract plain language explanation
                 diagnosis_explanation = ai_result.get('diagnosis_explanation', '')
                 
-                if primary_diagnoses and len(primary_diagnoses) > 0:
+                # Extract AI diagnosis (from Ollama/LLM) - more accurate than rule-based
+                ai_diagnosis = ai_result.get('ai_diagnosis', '')
+                ai_confidence = ai_result.get('ai_confidence', 0)
+                
+                # PRIORITIZE AI DIAGNOSIS over rule-based if:
+                # 1. AI diagnosis exists
+                # 2. AI confidence is reasonable (>= 0.4)
+                # 3. AI diagnosis is mentioned in explanation
+                use_ai_diagnosis = False
+                if ai_diagnosis and ai_confidence and ai_confidence >= 0.4:
+                    # Check if AI diagnosis appears in explanation
+                    if diagnosis_explanation and ai_diagnosis.lower() in diagnosis_explanation.lower():
+                        use_ai_diagnosis = True
+                        logger.info(f"Using AI diagnosis '{ai_diagnosis}' over rule-based (confidence: {ai_confidence})")
+                
+                if use_ai_diagnosis:
+                    # Use AI's diagnosis
+                    diagnosis_name = ai_diagnosis
+                    diagnosis_confidence = ai_confidence
+                    reasoning = f"AI analysis based on medical knowledge base. "
+                    reasoning += f"Used {ai_result.get('knowledge_sources', 0)} medical references. "
+                    reasoning += ai_result.get('ai_reasoning', '')
+                elif primary_diagnoses and len(primary_diagnoses) > 0:
+                    # Use rule-based diagnosis
                     top_diagnosis = primary_diagnoses[0]
                     diagnosis_name = top_diagnosis.get('condition', 'Unknown condition')
                     diagnosis_confidence = top_diagnosis.get('confidence', 0.5)

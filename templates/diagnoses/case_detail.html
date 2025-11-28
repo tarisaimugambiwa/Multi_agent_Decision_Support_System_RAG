@@ -95,47 +95,81 @@
     }
     
     .medication-card {
-        background: #e8f5e9;
-        border-left: 4px solid #4caf50;
-        padding: 15px;
-        border-radius: 8px;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-left: 5px solid #4caf50;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .medication-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .medication-name {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #2e7d32;
         margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .medication-detail {
+        margin-bottom: 10px;
+        padding-left: 24px;
+        position: relative;
+    }
+    
+    .medication-detail i {
+        position: absolute;
+        left: 0;
+        top: 2px;
+        color: #666;
+    }
+    
+    .medication-label {
+        font-weight: 600;
+        color: #424242;
+        margin-right: 6px;
+    }
+    
+    .medication-value {
+        color: #616161;
     }
     
     .action-timeline {
-        position: relative;
-        padding-left: 40px;
-        margin-top: 20px;
-    }
-    
-    .action-timeline::before {
-        content: '';
-        position: absolute;
-        left: 15px;
-        top: 0;
-        bottom: 0;
-        width: 3px;
-        background: #667eea;
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     
     .action-item {
-        position: relative;
-        padding: 15px;
-        margin-bottom: 15px;
-        background: #f8f9fa;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border-left: 4px solid #f44336;
         border-radius: 8px;
+        display: flex;
+        align-items: start;
+        gap: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
     
-    .action-item::before {
-        content: '';
-        position: absolute;
-        left: -28px;
-        top: 20px;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: #667eea;
-        border: 3px solid white;
+    .action-item i {
+        margin-top: 2px;
+        font-size: 1.1rem;
+    }
+    
+    .action-item strong {
+        color: #212529;
+        line-height: 1.5;
     }
     
     .priority-badge {
@@ -451,117 +485,67 @@
             <!-- Treatment Plan -->
             {% if ai_diagnosis_data.treatment %}
             <div class="report-section">
-                <h3 class="section-title">
-                    <i class="fas fa-notes-medical"></i>Treatment Plan & Recommendations
-                    {% if ai_diagnosis_data.treatment.knowledge_base_used %}
-                    <span class="badge bg-success ms-2" style="font-size: 0.7rem;">
-                        <i class="fas fa-database"></i> Evidence-Based from Knowledge Base
-                    </span>
-                    {% endif %}
+                <h3 class="section-title" style="background: linear-gradient(135deg, #004ed4 0%, #0057ec 100%); color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 25px;">
+                    <i class="fas fa-bolt me-2"></i>Immediate Actions
                 </h3>
 
-                <!-- Evidence Sources Badge -->
-                {% if ai_diagnosis_data.treatment.evidence_sources %}
-                <div class="alert alert-info mb-3" style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-left: 4px solid #2196F3;">
-                    <i class="fas fa-book-medical me-2"></i>
-                    <strong>Treatment guidelines sourced from:</strong>
-                    <ul class="mb-0 mt-2">
-                        {% for source in ai_diagnosis_data.treatment.evidence_sources %}
-                        <li>{{ source }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-
-                <!-- Action Plan Timeline -->
-                {% if ai_diagnosis_data.treatment.immediate_actions or ai_diagnosis_data.treatment.short_term_actions or ai_diagnosis_data.treatment.follow_up_actions %}
+                <!-- Action Plan - Immediate Actions Only -->
+                {% if ai_diagnosis_data.treatment.immediate_actions %}
                 <div class="action-timeline">
-                    {% if ai_diagnosis_data.treatment.immediate_actions %}
-                    <h5><i class="fas fa-exclamation-circle text-danger me-2"></i>Immediate Actions (0-15 minutes)</h5>
+                    <h5 style="color: #d32f2f; font-weight: 700; margin-bottom: 20px;">
+                        <i class="fas fa-bolt me-2"></i>Immediate Actions Required
+                    </h5>
                     {% for action in ai_diagnosis_data.treatment.immediate_actions %}
                     <div class="action-item">
-                        <i class="fas fa-bolt text-danger me-2"></i>
+                        <i class="fas fa-check-circle text-danger"></i>
                         <strong>{{ action }}</strong>
                     </div>
                     {% endfor %}
-                    {% endif %}
-
-                    {% if ai_diagnosis_data.treatment.short_term_actions %}
-                    <h5 class="mt-4"><i class="fas fa-clock text-warning me-2"></i>Short-term Actions (Within 1-4 hours)</h5>
-                    {% for action in ai_diagnosis_data.treatment.short_term_actions %}
-                    <div class="action-item">
-                        <i class="fas fa-check-circle text-warning me-2"></i>
-                        {{ action }}
-                    </div>
-                    {% endfor %}
-                    {% endif %}
-
-                    {% if ai_diagnosis_data.treatment.follow_up_actions %}
-                    <h5 class="mt-4"><i class="fas fa-calendar-check text-info me-2"></i>Follow-up Actions (3-7 days)</h5>
-                    {% for action in ai_diagnosis_data.treatment.follow_up_actions %}
-                    <div class="action-item">
-                        <i class="fas fa-arrow-right text-info me-2"></i>
-                        {{ action }}
-                    </div>
-                    {% endfor %}
-                    {% endif %}
                 </div>
                 {% endif %}
 
                 <!-- Medications -->
                 {% if ai_diagnosis_data.treatment.medications %}
                 <div class="mt-4">
-                    <h5><i class="fas fa-pills me-2"></i>Medication Recommendations
-                        {% if ai_diagnosis_data.treatment.medications.knowledge_base_used %}
-                        <span class="badge bg-primary ms-2" style="font-size: 0.65rem;">
-                            <i class="fas fa-book-medical"></i> From Medical Guidelines
-                        </span>
-                        {% endif %}
+                    <h5 style="background: linear-gradient(135deg, #004ed4 0%, #0057ec 100%); color: white; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-size: 1.2rem;">
+                        <i class="fas fa-pills me-2"></i>Medication Recommendations
                     </h5>
-
-                    <!-- Medication Evidence Sources -->
-                    {% if ai_diagnosis_data.treatment.medications.evidence_sources %}
-                    <div class="alert alert-light border-start border-primary border-3 mb-3" style="font-size: 0.9rem;">
-                        <i class="fas fa-file-medical-alt text-primary me-2"></i>
-                        <strong>Referenced from:</strong> 
-                        {% for source in ai_diagnosis_data.treatment.medications.evidence_sources %}
-                            {% if not forloop.last %}
-                                {{ source }}, 
-                            {% else %}
-                                {{ source }}
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                    {% endif %}
                     
                     {% if ai_diagnosis_data.treatment.medications.primary_medications %}
-                    <h6 class="mt-3"><i class="fas fa-star text-warning me-2"></i>Primary Medications:</h6>
+                    <h6 class="mt-3 mb-3" style="font-size: 1.1rem; color: #424242;">
+                        <i class="fas fa-capsules text-success me-2"></i>Prescribed Medications
+                    </h6>
                     {% for med in ai_diagnosis_data.treatment.medications.primary_medications %}
                     <div class="medication-card">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="w-100">
-                                <strong class="text-success">
-                                    <i class="fas fa-prescription-bottle me-2"></i>
-                                    {{ med.name }}
-                                </strong>
-                                <p class="mb-1 mt-2">
-                                    <i class="fas fa-tablets me-1"></i><strong>Dosage:</strong> {{ med.dosage }}<br>
-                                    <i class="fas fa-calendar me-1"></i><strong>Duration:</strong> {{ med.duration }}<br>
-                                    <i class="fas fa-info-circle me-1"></i><strong>Instructions:</strong> {{ med.instructions }}
-                                </p>
-                                {% if med.source %}
-                                <p class="text-muted mb-1" style="font-size: 0.85rem;">
-                                    <i class="fas fa-book me-1"></i><em>Source: {{ med.source }}</em>
-                                </p>
-                                {% endif %}
-                                {% if med.contraindications %}
-                                <p class="text-danger mb-0">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    <strong>Warning:</strong> {{ med.contraindications }}
-                                </p>
-                                {% endif %}
-                            </div>
+                        <div class="medication-name">
+                            <i class="fas fa-prescription-bottle me-2"></i>
+                            {{ med.name }}
                         </div>
+                        
+                        <div class="medication-detail">
+                            <i class="fas fa-pills"></i>
+                            <span class="medication-label">Dosage:</span>
+                            <span class="medication-value">{{ med.dosage }}</span>
+                        </div>
+                        
+                        <div class="medication-detail">
+                            <i class="fas fa-clock"></i>
+                            <span class="medication-label">Duration:</span>
+                            <span class="medication-value">{{ med.duration }}</span>
+                        </div>
+                        
+                        <div class="medication-detail">
+                            <i class="fas fa-info-circle"></i>
+                            <span class="medication-label">How to take:</span>
+                            <span class="medication-value">{{ med.instructions }}</span>
+                        </div>
+                        
+                        {% if med.contraindications %}
+                        <div class="alert alert-danger mt-3 mb-0" style="padding: 10px 14px; font-size: 0.9rem;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Important Warning:</strong> {{ med.contraindications }}
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                     {% endif %}
@@ -581,11 +565,6 @@
                                     <i class="fas fa-calendar me-1"></i><strong>Duration:</strong> {{ med.duration }}<br>
                                     <i class="fas fa-info-circle me-1"></i><strong>Instructions:</strong> {{ med.instructions }}
                                 </p>
-                                {% if med.source %}
-                                <p class="text-muted mb-1" style="font-size: 0.85rem;">
-                                    <i class="fas fa-book me-1"></i><em>Source: {{ med.source }}</em>
-                                </p>
-                                {% endif %}
                                 {% if med.contraindications %}
                                 <p class="text-danger mb-0">
                                     <i class="fas fa-exclamation-triangle me-1"></i>
@@ -596,6 +575,16 @@
                         </div>
                     </div>
                     {% endfor %}
+                    {% endif %}
+                    
+                    <!-- Severity Assessment -->
+                    {% if ai_diagnosis_data.treatment.medications.severity_assessed %}
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-chart-line me-1"></i>
+                            <strong>Severity Assessment:</strong> {{ ai_diagnosis_data.treatment.medications.severity_assessed|title }}
+                        </small>
+                    </div>
                     {% endif %}
                     
                     <!-- Show message if no medications available -->
@@ -626,21 +615,6 @@
                         <i class="fas fa-shield-alt me-2"></i>{{ warning }}
                     </div>
                     {% endfor %}
-                </div>
-                {% endif %}
-
-                <!-- Success Criteria -->
-                {% if ai_diagnosis_data.treatment.success_criteria %}
-                <div class="mt-4">
-                    <h5><i class="fas fa-clipboard-check text-success me-2"></i>Treatment Success Indicators</h5>
-                    <div class="alert alert-success" style="background: #e8f5e9; border-left: 4px solid #4caf50;">
-                        <p class="mb-0"><strong>Look for these signs of improvement:</strong></p>
-                        <ul class="mt-2 mb-0">
-                            {% for criteria in ai_diagnosis_data.treatment.success_criteria %}
-                            <li>{{ criteria }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
                 </div>
                 {% endif %}
 
