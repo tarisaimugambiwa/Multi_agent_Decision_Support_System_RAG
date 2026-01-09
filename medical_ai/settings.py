@@ -146,9 +146,10 @@ SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 # AI/LLM Settings
-# Ollama Configuration (Local LLM)
-OLLAMA_API_URL = 'http://localhost:11434/api/generate'
-OLLAMA_MODEL = 'llama3.2'  # Options: llama3.2, llama3.1, mistral, meditron, etc.
+# DeepSeek R1 Configuration
+DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'
+DEEPSEEK_API_KEY = 'sk-0b4f10d4f37040039d1e0f15cd62ba70'
+DEEPSEEK_MODEL = 'deepseek-reasoner'  # DeepSeek R1 reasoning model
 
 # HuggingFace API (Optional fallback)
 HUGGINGFACE_API_KEY = None  # Set to your API key if using HuggingFace

@@ -5,49 +5,416 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Alera</title>
-    
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Custom CSS -->
-<style>
-    body {
-        background: linear-gradient(135deg, #fafafa 0%, #f4f4f5 100%);
-        background-size: 400% 400%;
-        animation: gradientShift 15s ease infinite;
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-    }
-    
-    @keyframes gradientShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    
-    .login-wrapper {
-        width: 100%;
-        padding: 40px 20px;
-    }
-    
-    .login-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        overflow: hidden;
-        display: flex;
-    }
-    
-    .login-form-section {
-        padding: 50px 40px;
-    }
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #3d4857;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Background mountain image with gradient overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('/static/login.jpg');
+            background-repeat: no-repeat;
+            background-position: center right;
+            background-size: cover;
+            z-index: 0;
+        }
+
+        /* Gradient overlay that fades from dark left to transparent right */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, 
+                #3d4857 0%, 
+                #3d4857 20%, 
+                rgba(61, 72, 87, 0.95) 35%, 
+                rgba(61, 72, 87, 0.7) 50%, 
+                rgba(61, 72, 87, 0.3) 70%, 
+                transparent 100%
+            );
+            z-index: 1;
+        }
+
+        /* Navigation */
+        .navbar {
+            background: transparent;
+            padding: 1.5rem 3rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            font-weight: 400;
+            font-size: 1.1rem;
+            text-decoration: none;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: #0ea5e9;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 3rem;
+            margin-left: auto;
+        }
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            transition: color 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: white;
+        }
+
+        /* Main Container */
+        .login-wrapper {
+            position: relative;
+            z-index: 2;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 2rem 2rem 2rem 4rem;
+            margin-top: 3rem;
+            margin-left: 8%;
+        }
+
+        .start-label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .main-heading {
+            color: white;
+            font-size: 3.5rem;
+            font-weight: 400;
+            margin-bottom: 1.2rem;
+            line-height: 1.1;
+        }
+
+        .main-heading .dot {
+            color: #0ea5e9;
+        }
+
+        .auth-toggle {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 3rem;
+            font-size: 0.95rem;
+        }
+
+        .auth-toggle a {
+            color: #0ea5e9;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+
+        /* Form Styling */
+        .form-group {
+            position: relative;
+            margin-bottom: 1.2rem;
+        }
+
+        .form-label {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.6rem;
+            display: block;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 1.1rem 3rem 1.1rem 1.2rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .form-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.12);
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .input-icon {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.25);
+            pointer-events: none;
+            font-size: 0.9rem;
+        }
+
+        .form-group.has-label .input-icon {
+            top: calc(50% + 14px);
+        }
+
+        /* Password visibility toggle */
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-group.has-label .password-toggle {
+            top: calc(50% + 14px);
+        }
+
+        .password-toggle:hover {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Remember me checkbox */
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 2rem;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #0ea5e9;
+        }
+
+        .remember-me label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2.5rem;
+        }
+
+        .btn-secondary-custom {
+            flex: 1;
+            padding: 1.1rem 2rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary-custom:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .btn-primary-custom {
+            flex: 1;
+            padding: 1.1rem 2rem;
+            background: #0ea5e9;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
+        }
+
+        .btn-primary-custom:hover {
+            background: #0284c7;
+            box-shadow: 0 6px 18px rgba(14, 165, 233, 0.5);
+            transform: translateY(-1px);
+        }
+
+        /* Decorative logo in bottom right */
+        .decorative-logo {
+            position: fixed;
+            bottom: 2.5rem;
+            right: 2.5rem;
+            opacity: 0.2;
+            z-index: 2;
+        }
+
+        .decorative-logo svg {
+            width: 100px;
+            height: 100px;
+        }
+
+        /* Alert messages */
+        .alert-custom {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: 8px;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.5rem;
+            color: #fca5a5;
+            backdrop-filter: blur(10px);
+            font-size: 0.9rem;
+        }
+
+        .alert-success-custom {
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.25);
+            color: #86efac;
+        }
+
+        /* Demo credentials */
+        .demo-section {
+            margin-top: 2.5rem;
+            padding: 1.8rem;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .demo-title {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+            margin-bottom: 1.2rem;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .credential-box {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 1.1rem 1.2rem;
+            margin-bottom: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 3px solid #0ea5e9;
+        }
+
+        .credential-box:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .credential-box.doctor {
+            border-left-color: #10b981;
+        }
+
+        .credential-box.nurse {
+            border-left-color: #ec4899;
+        }
+
+        .credential-title {
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .credential-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .credential-detail strong {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem 1.5rem;
+            }
+
+            .login-wrapper {
+                padding: 1rem;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .main-heading {
+                font-size: 2.5rem;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            body::after {
+                background: linear-gradient(to right, 
+                    #3d4857 0%, 
+                    rgba(61, 72, 87, 0.95) 50%, 
+                    rgba(61, 72, 87, 0.7) 100%
+                );
+            }
+
+            .decorative-logo {
+                display: none;
+            }
+        }
     
     .login-header {
         text-align: center;
@@ -348,231 +715,146 @@
         object-fit: cover;
         border-radius: 0;
     }
-    
-    @media (max-width: 991px) {
-        .login-image-section {
-            padding: 30px;
-            min-height: 300px;
-        }
-    }
 </style>
 </head>
 <body>
-
-<div class="login-wrapper">
-    <div class="login-container">
-        <div class="row g-0">
-            <!-- Left Column - Login Form -->
-            <div class="col-lg-7">
-                <div class="login-form-section">
-                    <div class="login-header">
-                        <div class="icon-wrapper">
-                            <i class="fas fa-user-md"></i>
-                        </div>
-                        <h1>Alera</h1>
-                        <p>Sign in to continue to your dashboard</p>
-                    </div>
-
-                    {% if messages %}
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            {% for message in messages %}
-                                <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
-                            {% endfor %}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endif %}
-                    
-                    {% if form.errors or form.non_field_errors %}
-                        <div class="error-messages">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Login Failed</strong>
-                            {% if form.non_field_errors %}
-                                <ul class="mb-0 mt-2">
-                                    {% for error in form.non_field_errors %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            {% else %}
-                                <ul class="mb-0 mt-2">
-                                    {% if form.username.errors %}
-                                        {% for error in form.username.errors %}
-                                            <li>Username: {{ error }}</li>
-                                        {% endfor %}
-                                    {% endif %}
-                                    {% if form.password.errors %}
-                                        {% for error in form.password.errors %}
-                                            <li>Password: {{ error }}</li>
-                                        {% endfor %}
-                                    {% endif %}
-                                </ul>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-
-                    <form method="post" novalidate class="login-form">
-                        {% csrf_token %}
-                        
-                        <div class="form-group">
-                            <div class="form-floating">
-                                <input 
-                                    type="text" 
-                                    class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
-                                    id="id_username" 
-                                    name="username" 
-                                    placeholder="Username"
-                                    value="{{ form.username.value|default:'' }}"
-                                    required
-                                    autocomplete="username"
-                                >
-                                <label for="id_username">
-                                    <i class="fas fa-user me-2"></i>Username
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-floating">
-                                <input 
-                                    type="password" 
-                                    class="form-control {% if form.password.errors %}is-invalid{% endif %}" 
-                                    id="id_password" 
-                                    name="password" 
-                                    placeholder="Password"
-                                    required
-                                    autocomplete="current-password"
-                                >
-                                <label for="id_password">
-                                    <i class="fas fa-lock me-2"></i>Password
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-check">
-                                <input 
-                                    class="form-check-input" 
-                                    type="checkbox" 
-                                    id="remember_me" 
-                                    name="remember_me"
-                                >
-                                <label class="form-check-label" for="remember_me">
-                                    Remember me for 30 days
-                                </label>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-login w-100" id="signInBtn">
-                            <i class="fas fa-sign-in-alt me-2"></i>Sign In
-                        </button>
-
-                        {% if next %}
-                            <input type="hidden" name="next" value="{{ next }}">
-                        {% endif %}
-                    </form>
-
-                    <div class="login-footer">
-                        <p><i class="fas fa-shield-alt me-2"></i>Secure medical platform</p>
-                        <div class="footer-links">
-                            <a href="#"><i class="fas fa-question-circle me-1"></i>Need Help?</a>
-                            <span class="separator">|</span>
-                            <a href="/system-admin/" title="System Administrator Only"><i class="fas fa-cog me-1"></i>System Admin</a>
-                            <span class="separator">|</span>
-                            <a href="{% url 'patients:patient_signup' %}"><i class="fas fa-user-plus me-1"></i>Sign up as Patient</a>
-                        </div>
-                    </div>
-                </div>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">
+            <div class="brand-icon">
+                <i class="fas fa-heartbeat"></i>
             </div>
-
-            <!-- Right Column - Image -->
-            <div class="col-lg-5">
-                <div class="login-image-section">
-                    <img src="{% static 'login.jpg' %}" alt="Alera Healthcare System" class="img-fluid">
-                </div>
-            </div>
-          
+            Alera
+        </a>
+        <div class="nav-links">
+            <a href="{% url 'patients:patient_signup' %}">Join</a>
         </div>
-    </div>
-</div>
+    </nav>
 
-<script>
-function fillCredentials(username, password) {
-    // Fill the form fields
-    const usernameField = document.getElementById('id_username');
-    const passwordField = document.getElementById('id_password');
-    
-    usernameField.value = username;
-    passwordField.value = password;
-    
-    // Add visual feedback with animation
-    usernameField.classList.add('border-success');
-    passwordField.classList.add('border-success');
-    
-    // Remove the success border after 1 second
-    setTimeout(function() {
-        usernameField.classList.remove('border-success');
-        passwordField.classList.remove('border-success');
-    }, 1000);
-    
-    // Focus on the sign in button
-    document.getElementById('signInBtn').focus();
-}
+    <!-- Main Content -->
+    <div class="login-wrapper">
+        <h1 class="main-heading">Sign in to account<span class="dot">.</span></h1>
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Form validation
-    const form = document.querySelector('.login-form');
-    
-    form.addEventListener('submit', function(e) {
-        const username = document.getElementById('id_username').value.trim();
-        const password = document.getElementById('id_password').value;
-        
-        if (!username || !password) {
-            e.preventDefault();
-            
-            let errorDiv = document.querySelector('.error-messages');
-            if (!errorDiv) {
-                errorDiv = document.createElement('div');
-                errorDiv.className = 'error-messages';
-                form.insertBefore(errorDiv, form.firstChild);
-            }
-            
-            errorDiv.innerHTML = `
+        <!-- Error Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert-custom {% if message.tags == 'success' %}alert-success-custom{% endif %}">
+                    <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            <div class="alert-custom">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>Validation Error</strong>
-                <ul class="mb-0 mt-2">
-                    ${!username ? '<li>Username is required</li>' : ''}
-                    ${!password ? '<li>Password is required</li>' : ''}
-                </ul>
-            `;
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Login Form -->
+        <form method="post" id="loginForm">
+            {% csrf_token %}
+
+            <div class="form-group has-label">
+                <label class="form-label" for="id_username">Username</label>
+                <input 
+                    type="text" 
+                    class="form-input" 
+                    name="username" 
+                    id="id_username" 
+                    placeholder="Enter your username"
+                    value="{{ form.username.value|default:'' }}"
+                    required
+                    autofocus
+                    autocomplete="username"
+                >
+                <i class="fas fa-user input-icon"></i>
+            </div>
+
+            <div class="form-group has-label">
+                <label class="form-label" for="id_password">Password</label>
+                <input 
+                    type="password" 
+                    class="form-input" 
+                    name="password" 
+                    id="id_password" 
+                    placeholder="••••••••"
+                    required
+                    autocomplete="current-password"
+                >
+                <button type="button" class="password-toggle" onclick="togglePassword()">
+                    <i class="fas fa-eye" id="passwordIcon"></i>
+                </button>
+            </div>
+
+            <div class="remember-me">
+                <input type="checkbox" id="remember_me" name="remember_me">
+                <label for="remember_me">Keep me logged in</label>
+            </div>
+
+            {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+
+            <div class="btn-group">
+                <button type="button" class="btn-secondary-custom" onclick="window.location.href='/admin/'">
+                    Admin Access
+                </button>
+                <button type="submit" class="btn-primary-custom">
+                    Sign In
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Decorative Logo -->
+    <div class="decorative-logo">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 50L40 30L50 40L70 20L80 30L50 80L20 50Z" fill="white" opacity="0.3"/>
+            <circle cx="40" cy="30" r="5" fill="white" opacity="0.5"/>
+            <circle cx="70" cy="20" r="5" fill="white" opacity="0.5"/>
+        </svg>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('id_password');
+            const passwordIcon = document.getElementById('passwordIcon');
             
-            if (!username) {
-                document.getElementById('id_username').classList.add('is-invalid');
-            }
-            if (!password) {
-                document.getElementById('id_password').classList.add('is-invalid');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordIcon.classList.remove('fa-eye');
+                passwordIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                passwordIcon.classList.remove('fa-eye-slash');
+                passwordIcon.classList.add('fa-eye');
             }
         }
-    });
-    
-    // Remove invalid class on input
-    document.querySelectorAll('.form-control').forEach(function(input) {
-        input.addEventListener('input', function() {
-            this.classList.remove('is-invalid');
-            const errorDiv = document.querySelector('.error-messages');
-            if (errorDiv && this.value.trim()) {
-                const allValid = Array.from(document.querySelectorAll('.form-control')).every(
-                    el => el.value.trim() && !el.classList.contains('is-invalid')
-                );
-                if (allValid) {
-                    errorDiv.remove();
-                }
-            }
-        });
-    });
-});
-</script>
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        function fillCredentials(username, password) {
+            document.getElementById('id_username').value = username;
+            document.getElementById('id_password').value = password;
+            
+            // Add visual feedback
+            const usernameInput = document.getElementById('id_username');
+            const passwordInput = document.getElementById('id_password');
+            
+            usernameInput.style.borderColor = '#10b981';
+            passwordInput.style.borderColor = '#10b981';
+            
+            setTimeout(() => {
+                usernameInput.style.borderColor = '';
+                passwordInput.style.borderColor = '';
+            }, 1500);
+            
+            // Focus on submit button
+            document.querySelector('.btn-primary-custom').focus();
+        }
+    </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
