@@ -310,6 +310,13 @@
             localStream.getTracks().forEach(track => track.stop());
         }
         
+        // Clear cache before navigating
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                names.forEach(name => caches.delete(name));
+            });
+        }
+        
         fetch('{% url "communications:end_call" call.id %}', {
             method: 'POST',
             headers: {
@@ -317,11 +324,12 @@
                 'X-CSRFToken': '{{ csrf_token }}'
             }
         }).then(() => {
-            window.location.href = '{% url "communications:inbox" %}';
+            // Navigate back and force reload
+            window.location.href = '{% url "communications:inbox" %}?refresh=' + Date.now();
         }).catch(error => {
             console.error('Error ending call:', error);
-            // Redirect anyway
-            window.location.href = '{% url "communications:inbox" %}';
+            // Navigate anyway
+            window.location.href = '{% url "communications:inbox" %}?refresh=' + Date.now();
         });
     }
     
