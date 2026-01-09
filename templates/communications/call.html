@@ -1,0 +1,525 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ call.call_type|title }} Call - Alera{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<style>
+    .call-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: calc(100vh - 120px);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .call-content {
+        text-align: center;
+        color: white;
+        z-index: 10;
+    }
+    
+    .call-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        font-weight: 600;
+        margin: 0 auto 2rem;
+        border: 4px solid rgba(255,255,255,0.3);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    .call-status {
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.9;
+    }
+    
+    .call-timer {
+        font-size: 2rem;
+        font-weight: 300;
+        margin-top: 1rem;
+    }
+    
+    .call-controls {
+        margin-top: 3rem;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+    
+    .call-btn {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .call-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .call-btn.mute {
+        background: rgba(255,255,255,0.2);
+    }
+    
+    .call-btn.end {
+        background: #dc3545;
+    }
+    
+    .call-btn.end:hover {
+        background: #c82333;
+    }
+    
+    .video-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+    
+    #remoteVideo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    #localVideo {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 200px;
+        height: 150px;
+        border-radius: 10px;
+        border: 2px solid white;
+        object-fit: cover;
+        background: #000;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" 
+     data-call-type="{{ call.call_type }}"
+     data-end-call-url="{% url 'communications:end_call' call.id %}"
+     data-inbox-url="{% url 'communications:inbox' %}"
+     data-csrf-token="{{ csrf_token }}">
+    <div class="call-container">
+        {% if call.call_type == 'video' %}
+        <div class="video-container">
+            <video id="remoteVideo" autoplay playsinline></video>
+            <video id="localVideo" autoplay muted playsinline></video>
+        </div>
+        {% endif %}
+        
+        <div class="call-content">
+            <div class="call-avatar">
+                {{ receiver.get_full_name|slice:":1"|upper|default:receiver.username|slice:":1"|upper }}
+            </div>
+            <h2>{{ receiver.get_full_name|default:receiver.username }}</h2>
+            <div class="call-status">
+                <i class="fas fa-{% if call.call_type == 'video' %}video{% else %}phone{% endif %} me-2"></i>
+                <span id="callStatus">Calling...</span>
+            </div>
+            <div class="call-timer" id="callTimer">00:00</div>
+            
+            <div class="call-controls">
+                <button class="call-btn mute" id="muteBtn" onclick="toggleMute()" title="Mute">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                {% if call.call_type == 'video' %}
+                <button class="call-btn mute" id="videoBtn" onclick="toggleVideo()" title="Turn off camera">
+                    <i class="fas fa-video"></i>
+                </button>
+                {% endif %}
+                <button class="call-btn end" 
+                        onclick="endCallWithConfirm()" 
+                        title="End call">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    /* WebRTC Implementation */
+    let callStartTime = null;
+    let timerInterval = null;
+    let isMuted = false;
+    let isVideoOff = false;
+    let localStream = null;
+    let peerConnection = null;
+    let pollingInterval = null;
+    let noAnswerTimeout = null;
+    
+    const callId = {{ call.id }};
+    const isReceiver = {{ is_receiver|default:'false'|lower }};
+    const callType = '{{ call.call_type }}';
+    
+    // STUN servers for NAT traversal
+    const configuration = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    };
+    
+    // Start call timer
+    function startTimer() {
+        callStartTime = new Date();
+        timerInterval = setInterval(updateTimer, 1000);
+        document.getElementById('callStatus').textContent = 'Connected';
+    }
+    
+    // Update status to ringing
+    function setRingingStatus() {
+        document.getElementById('callStatus').textContent = 'Ringing...';
+    }
+    
+    function updateTimer() {
+        const now = new Date();
+        const diff = Math.floor((now - callStartTime) / 1000);
+        const minutes = Math.floor(diff / 60);
+        const seconds = diff % 60;
+        document.getElementById('callTimer').textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    function toggleMute() {
+        isMuted = !isMuted;
+        const btn = document.getElementById('muteBtn');
+        const icon = btn.querySelector('i');
+        
+        if (localStream) {
+            localStream.getAudioTracks().forEach(track => {
+                track.enabled = !isMuted;
+            });
+        }
+        
+        if (isMuted) {
+            icon.classList.remove('fa-microphone');
+            icon.classList.add('fa-microphone-slash');
+            btn.style.background = 'rgba(220, 53, 69, 0.8)';
+        } else {
+            icon.classList.remove('fa-microphone-slash');
+            icon.classList.add('fa-microphone');
+            btn.style.background = 'rgba(255,255,255,0.2)';
+        }
+    }
+    
+    function toggleVideo() {
+        isVideoOff = !isVideoOff;
+        const btn = document.getElementById('videoBtn');
+        const icon = btn.querySelector('i');
+        
+        if (localStream) {
+            localStream.getVideoTracks().forEach(track => {
+                track.enabled = !isVideoOff;
+            });
+        }
+        
+        if (isVideoOff) {
+            icon.classList.remove('fa-video');
+            icon.classList.add('fa-video-slash');
+            btn.style.background = 'rgba(220, 53, 69, 0.8)';
+        } else {
+            icon.classList.remove('fa-video-slash');
+            icon.classList.add('fa-video');
+            btn.style.background = 'rgba(255,255,255,0.2)';
+        }
+    }
+    
+    // End call with SweetAlert confirmation
+    function endCallWithConfirm() {
+        // Determine if call is ongoing or still ringing
+        const isOngoing = callStartTime !== null;
+        const title = isOngoing ? 'End Call?' : 'Cancel Call?';
+        const text = isOngoing 
+            ? 'Are you sure you want to end this call?' 
+            : 'Are you sure you want to cancel this call?';
+        const confirmText = isOngoing ? 'Yes, end call' : 'Yes, cancel';
+        
+        Swal.fire({
+            title: title,
+            text: text,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: confirmText,
+            cancelButtonText: 'Go back',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: '#fff',
+            customClass: {
+                popup: 'swal-gradient'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                endCall();
+            }
+        });
+    }
+    
+    function endCall() {
+        // Clear the no-answer timeout if it exists
+        if (noAnswerTimeout) {
+            clearTimeout(noAnswerTimeout);
+        }
+        
+        if (timerInterval) {
+            clearInterval(timerInterval);
+        }
+        
+        // Stop signaling poll
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+        
+        // Close peer connection
+        if (peerConnection) {
+            peerConnection.close();
+        }
+        
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+        
+        fetch('{% url "communications:end_call" call.id %}', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        }).then(() => {
+            window.location.href = '{% url "communications:inbox" %}';
+        }).catch(error => {
+            console.error('Error ending call:', error);
+            // Redirect anyway
+            window.location.href = '{% url "communications:inbox" %}';
+        });
+    }
+    
+    // Initialize WebRTC
+    async function initCall() {
+        try {
+            // Get user media
+            const constraints = callType === 'video' 
+                ? { video: true, audio: true }
+                : { video: false, audio: true };
+            
+            localStream = await navigator.mediaDevices.getUserMedia(constraints);
+            
+            if (callType === 'video') {
+                document.getElementById('localVideo').srcObject = localStream;
+            }
+            
+            // Create peer connection
+            peerConnection = new RTCPeerConnection(configuration);
+            
+            // Add local stream tracks to peer connection
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+            
+            // Handle incoming tracks
+            peerConnection.ontrack = (event) => {
+                console.log('Received remote track');
+                const remoteVideo = document.getElementById('remoteVideo');
+                if (remoteVideo && event.streams[0]) {
+                    remoteVideo.srcObject = event.streams[0];
+                    // Start timer when actually connected
+                    startTimer();
+                }
+            };
+            
+            // Handle ICE candidates
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    sendSignal({
+                        type: 'ice-candidate',
+                        candidate: event.candidate.toJSON()
+                    });
+                }
+            };
+            
+            // Start signaling based on role
+            if (!isReceiver) {
+                // Caller creates offer
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                
+                await sendSignal({
+                    type: 'offer',
+                    sdp: offer.sdp
+                });
+                
+                // Poll for answer
+                startSignalingPoll();
+            } else {
+                // Receiver waits for offer then creates answer
+                pollForOffer();
+            }
+            
+        } catch (error) {
+            console.error('Error initializing call:', error);
+            Swal.fire({
+                title: 'Error',
+                text: 'Unable to access camera/microphone. Please check permissions.',
+                icon: 'error',
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    }
+    
+    // Send signaling data to server
+    async function sendSignal(data) {
+        try {
+            const response = await fetch(`/communications/call/${callId}/signal/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(data)
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Error sending signal:', error);
+        }
+    }
+    
+    // Poll for signaling data
+    function startSignalingPoll() {
+        pollingInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/communications/call/${callId}/signal/`);
+                const data = await response.json();
+                
+                // Check for answer
+                if (data.answer && !peerConnection.currentRemoteDescription) {
+                    // Clear the no-answer timeout since the call was answered
+                    if (noAnswerTimeout) {
+                        clearTimeout(noAnswerTimeout);
+                        noAnswerTimeout = null;
+                    }
+                    
+                    // Update status to ringing when receiver answers
+                    setRingingStatus();
+                    
+                    const answer = new RTCSessionDescription({
+                        type: 'answer',
+                        sdp: data.answer
+                    });
+                    await peerConnection.setRemoteDescription(answer);
+                    console.log('Remote description set (answer)');
+                }
+                
+                // Process ICE candidates
+                if (data.ice_candidates) {
+                    for (const candidate of data.ice_candidates) {
+                        if (!peerConnection.currentRemoteDescription) continue;
+                        try {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                        } catch (e) {
+                            console.error('Error adding ICE candidate:', e);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+            }
+        }, 1000);
+    }
+    
+    // Receiver polls for offer
+    function pollForOffer() {
+        const offerPoll = setInterval(async () => {
+            try {
+                const response = await fetch(`/communications/call/${callId}/signal/`);
+                const data = await response.json();
+                
+                if (data.offer) {
+                    clearInterval(offerPoll);
+                    
+                    // Set remote description
+                    const offer = new RTCSessionDescription({
+                        type: 'offer',
+                        sdp: data.offer
+                    });
+                    await peerConnection.setRemoteDescription(offer);
+                    
+                    // Create answer
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    
+                    await sendSignal({
+                        type: 'answer',
+                        sdp: answer.sdp
+                    });
+                    
+                    // Start polling for ICE candidates
+                    startSignalingPoll();
+                }
+            } catch (error) {
+                console.error('Error polling for offer:', error);
+            }
+        }, 1000);
+    }
+    
+    // Start the call
+    initCall();
+    
+    // Set 60-second timeout for caller if no answer
+    if (!isReceiver) {
+        noAnswerTimeout = setTimeout(() => {
+            Swal.fire({
+                icon: 'info',
+                title: 'No Answer',
+                text: 'The person did not answer the call.',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#667eea'
+            }).then(() => {
+                endCall();
+            });
+        }, 60000); // 60 seconds
+    }
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+        if (noAnswerTimeout) clearTimeout(noAnswerTimeout);
+        if (pollingInterval) clearInterval(pollingInterval);
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+        if (peerConnection) {
+            peerConnection.close();
+        }
+    });
+</script>
+{% endblock %}

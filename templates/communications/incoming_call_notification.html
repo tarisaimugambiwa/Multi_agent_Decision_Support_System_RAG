@@ -1,0 +1,269 @@
+<!-- Incoming Call Modal -->
+<div class="modal fade" id="incomingCallModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+            <div class="modal-body text-center py-5">
+                <div class="mb-4">
+                    <div class="incoming-call-avatar mx-auto mb-3" style="width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 600; animation: pulse 1.5s infinite;">
+                        <span id="callerInitial">?</span>
+                    </div>
+                    <h3 id="callerName">Incoming Call</h3>
+                    <p class="mb-0"><span id="callerRole"></span></p>
+                    <p class="mt-2">
+                        <i class="fas fa-phone me-2" id="callTypeIcon"></i>
+                        <span id="callTypeText"></span>
+                    </p>
+                </div>
+                
+                <div class="d-flex justify-content-center gap-3">
+                    <button type="button" class="btn btn-success btn-lg rounded-circle" 
+                            onclick="answerIncomingCall()" 
+                            style="width: 70px; height: 70px;">
+                        <i class="fas fa-phone fa-lg"></i>
+                    </button>
+                    <button type="button" class="btn btn-danger btn-lg rounded-circle" 
+                            onclick="declineIncomingCall()" 
+                            style="width: 70px; height: 70px;">
+                        <i class="fas fa-phone-slash fa-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+</style>
+
+<script>
+let incomingCallCheckInterval;
+let currentIncomingCallId = null;
+
+// Check for incoming calls every 2 seconds
+function startIncomingCallChecker() {
+    console.log('Starting incoming call checker...');
+    console.log('Current path:', window.location.pathname);
+    
+    // Don't check if already on a call page
+    if (window.location.pathname.includes('/communications/call/')) {
+        console.log('On call page, not starting checker');
+        stopIncomingCallChecker();
+        return;
+    }
+    
+    if (incomingCallCheckInterval) {
+        console.log('Checker already running');
+        return; // Already running
+    }
+    
+    // Reset stale state from previous calls
+    console.log('Resetting stale currentIncomingCallId:', currentIncomingCallId);
+    currentIncomingCallId = null;
+    
+    console.log('Setting up interval to check every 2 seconds');
+    incomingCallCheckInterval = setInterval(checkForIncomingCalls, 2000);
+    // Check immediately on start
+    checkForIncomingCalls();
+}
+
+function stopIncomingCallChecker() {
+    console.log('Stopping incoming call checker');
+    if (incomingCallCheckInterval) {
+        clearInterval(incomingCallCheckInterval);
+        incomingCallCheckInterval = null;
+    }
+    stopRingtone();
+}
+
+function checkForIncomingCalls() {
+    // Stop checking if we navigated to a call page
+    if (window.location.pathname.includes('/communications/call/')) {
+        console.log('Now on call page, stopping checker');
+        stopIncomingCallChecker();
+        return;
+    }
+    
+    fetch('{% url "communications:check_incoming_calls" %}')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Incoming call check:', data);
+            console.log('Current incoming call ID:', currentIncomingCallId);
+            
+            if (data.has_call && !currentIncomingCallId) {
+                console.log('Showing incoming call modal for call:', data.call_id);
+                showIncomingCallModal(data);
+            } else if (data.has_call && currentIncomingCallId && data.call_id !== currentIncomingCallId) {
+                console.log('New call detected, hiding old modal and showing new one');
+                // Hide old modal and show new call
+                const modal = bootstrap.Modal.getInstance(document.getElementById('incomingCallModal'));
+                if (modal) {
+                    modal.hide();
+                }
+                stopRingtone();
+                currentIncomingCallId = null;
+                // Show new call after a brief delay
+                setTimeout(() => showIncomingCallModal(data), 300);
+            }
+            // DO NOT auto-hide modal when call disappears - let user try to answer and get error message
+            
+            // Update missed calls badge if present
+            updateMissedCallsBadge();
+        })
+        .catch(error => console.error('Error checking for calls:', error));
+}
+
+function updateMissedCallsBadge() {
+    fetch('/communications/get-missed-calls-count/')
+        .then(response => response.json())
+        .then(data => {
+            // Update nurse badge
+            const missedBadge = document.getElementById('missedCallsBadge');
+            if (missedBadge) {
+                if (data.count > 0) {
+                    missedBadge.textContent = data.count;
+                    missedBadge.style.display = 'inline-block';
+                } else {
+                    missedBadge.style.display = 'none';
+                }
+            }
+            
+            // Update doctor badge
+            const missedBadgeDoctor = document.getElementById('missedCallsBadgeDoctor');
+            if (missedBadgeDoctor) {
+                if (data.count > 0) {
+                    missedBadgeDoctor.textContent = data.count;
+                    missedBadgeDoctor.style.display = 'inline-block';
+                } else {
+                    missedBadgeDoctor.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => console.error('Error updating missed calls badge:', error));
+}
+
+function showIncomingCallModal(callData) {
+    console.log('showIncomingCallModal called with:', callData);
+    currentIncomingCallId = callData.call_id;
+    
+    // Update modal content
+    document.getElementById('callerInitial').textContent = callData.caller_name.charAt(0).toUpperCase();
+    document.getElementById('callerName').textContent = callData.caller_name;
+    document.getElementById('callerRole').textContent = callData.caller_role;
+    document.getElementById('callTypeText').textContent = callData.call_type === 'video' ? 'Video Call' : 'Voice Call';
+    
+    const iconElement = document.getElementById('callTypeIcon');
+    iconElement.className = callData.call_type === 'video' ? 'fas fa-video me-2' : 'fas fa-phone me-2';
+    
+    // Show modal
+    console.log('Creating and showing modal...');
+    const modal = new bootstrap.Modal(document.getElementById('incomingCallModal'));
+    modal.show();
+    console.log('Modal shown');
+    
+    // Play ringtone (optional)
+    playRingtone();
+}
+
+function answerIncomingCall() {
+    if (currentIncomingCallId) {
+        const callId = currentIncomingCallId;
+        console.log('Answering call:', callId);
+        
+        stopRingtone();
+        
+        // Hide and cleanup modal
+        const modalElement = document.getElementById('incomingCallModal');
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        }
+        
+        // Reset state immediately
+        currentIncomingCallId = null;
+        
+        // Navigate to answer page
+        window.location.href = `/communications/call/${callId}/answer/`;
+    }
+}
+
+function declineIncomingCall() {
+    if (currentIncomingCallId) {
+        const callId = currentIncomingCallId;
+        console.log('Declining call:', callId);
+        
+        stopRingtone();
+        currentIncomingCallId = null;
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('incomingCallModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        fetch(`/communications/call/${callId}/decline/`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCsrfToken()
+            }
+        }).catch(error => console.error('Error declining call:', error));
+    }
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+           document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+}
+
+let ringtoneAudio = null;
+
+function playRingtone() {
+    // Create audio element for ringtone (you can replace with actual ringtone file)
+    if (!ringtoneAudio) {
+        ringtoneAudio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVqzn77BdGAg+ltryxnMpBSh+zPLaizsIGGS57OihUBELTKXh8bllHAU2jdXzzn0vBSF1xe/glEILElyx6OyrWBUIQ5zd8sFuJAUuhM/z1YU2Bhxqvu7mnEoPEFWs5/C0YRoJPJPY88p2KwUme8rx3Y0+CRZiturqpVITC0mi4PG8aB8GM4nU8tGAMQYfcsLu45ZFDBFYr+fxr10ZCECa2/PFcSYEK4DN8diKOQcZZ7zs56FSEA1No+LyvmsiBS+F0PPahDQGH2696OaeTQ8QVqzn8LJeGQlAm9z0yHUpBSh+zPLaizsIGWS56+mjTxENTKPh8bllHAU1jdT0z3wvBSF0xe/glEILElyx6OyrWBUIQ5zd88FuJAUug8/01YU2Bhxqvu7mnEoPEFSs5/C0YRoIPJLY9Mp2LAUme8rx3Y0+CRZiturqpVITC0mh4PG8aB8GM4nU8tGAMQYfccPu45dGDBFYr+jxr10ZCECa2/PFcSYEK4DN8diKOQcZZ7zs56FSEA1Oo+LyvmsiBS+F0PPahDQGH2696OaeTQ8RVqzn8LJeGQlAm9z0yHUpBSh9zPLajDsIGWS56+mjTxENTKPh8bllHAU1jdT0z3wvBSF0xe/glEILElyx6OyrWBUIQ5zd88FuJAUug8/01YU2BRxqvu7mnEoPEFSs5/C0YRoIPJLY9Mp2LAUme8rx3Y0+CRZiturqpVITC0mh4PG8aB8GM4nU8tGAMQYfccPu45dGDBFYr+jxr10ZCECa2/PFcSYEK4DN8diKOQcZZ7zs56FSEA1Oo+LyvmsiBS+F0PPahDQGH2696OaeTQ8RVqzn8LJeGQlAm9z0yHUpBSh9zPLajDsIGWS56+mjTxENTKPh8bllHAU1jdT0z3wvBSF0xe/glEILElyx6OyrWBUIQ5zd88FuJAUug8/01YU2BRxqvu7mnEoPEFSs5/C0YRoIPJLY9Mp2LAUme8rx3Y0+CRZiturqpVITC0mh4PG8aB8GM4nU8tGAMQYfccPu45dGDBFYr+jxr10ZCECa2/PFcSYEK4DN8diKOQcZZ7zs56FSEA1Oo+LyvmsiBS+F0PPahDQGH2696OaeTQ8RVqzn8LJeGQlAm9z0yHUpBSh9zPLajDsIGWS56+mjTxENTKPh8bllHAU1jdT0z3wvBSF0xe/glEILElyx6OyrWBUIQ5zd88FuJAUug8/01YU2BRxqvu7mnEoPEFSs5/C0YRoIPJLY9Mp2LAUme8rx3Y0+CRZiturqpVITC0mh4PG8aB8GM4nU8tGAMQYfccPu45dGDBFYr+jxr10ZCECa2/PFcSYEK4DN8diKOQcZZ7zs56FSEA1Oo+LyvmsiBS+F0PPahDQGH2696OaeTQ8RVqzn8LJeGQlAm9z0yHUpBSh9zPLajDsIGWS56+mjTxENTKPh8bllHAU1jdT0z3wvBQ==');
+        ringtoneAudio.loop = true;
+    }
+    ringtoneAudio.play().catch(e => console.log('Could not play ringtone:', e));
+}
+
+function stopRingtone() {
+    if (ringtoneAudio) {
+        ringtoneAudio.pause();
+        ringtoneAudio.currentTime = 0;
+    }
+}
+
+// Start checking for incoming calls when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    {% if user.is_authenticated %}
+    console.log('DOM loaded, starting incoming call checker');
+    startIncomingCallChecker();
+    {% endif %}
+});
+
+// Stop checking when user leaves the page
+window.addEventListener('beforeunload', function() {
+    stopIncomingCallChecker();
+});
+
+// Monitor for navigation changes and restart polling if needed
+let lastPath = window.location.pathname;
+setInterval(function() {
+    const currentPath = window.location.pathname;
+    if (currentPath !== lastPath) {
+        console.log('Navigation detected:', lastPath, '->', currentPath);
+        lastPath = currentPath;
+        
+        // If navigated away from call page, restart checker
+        if (!currentPath.includes('/communications/call/')) {
+            if (!incomingCallCheckInterval) {
+                console.log('Back from call page, restarting checker');
+                startIncomingCallChecker();
+            }
+        }
+    }
+}, 500);
+</script>

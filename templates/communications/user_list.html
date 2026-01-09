@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}Start Conversation - Alera{% endblock %}
+
+{% block extra_css %}
+<style>
+    .user-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .user-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .user-avatar-large {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 1.5rem;
+    }
+    
+    .user-avatar-large.nurse {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .user-avatar-large.doctor {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .user-avatar-large.admin {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .role-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .role-badge.nurse {
+        background: #ffe5f0;
+        color: #d6336c;
+    }
+    
+    .role-badge.doctor {
+        background: #e0f7ff;
+        color: #006d9e;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-users me-2 text-primary"></i>Start New Conversation</h2>
+            <p class="text-muted">Select a team member to start messaging</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <a href="{% url 'communications:inbox' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Inbox
+            </a>
+        </div>
+    </div>
+    
+    <!-- Role Filter -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="btn-group" role="group">
+                <a href="{% url 'communications:user_list' %}" class="btn btn-outline-primary {% if not request.GET.role %}active{% endif %}">
+                    All Users
+                </a>
+                <a href="?role=DOCTOR" class="btn btn-outline-primary {% if request.GET.role == 'DOCTOR' %}active{% endif %}">
+                    Doctors
+                </a>
+                <a href="?role=NURSE" class="btn btn-outline-primary {% if request.GET.role == 'NURSE' %}active{% endif %}">
+                    Nurses
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        {% for user in users %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{% url 'communications:start_conversation' user.id %}" class="text-decoration-none">
+                <div class="user-card">
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar-large {{ user.role|lower }}">
+                            {{ user.get_full_name|slice:":1"|upper|default:user.username|slice:":1"|upper }}
+                        </div>
+                        <div class="ms-3 flex-grow-1">
+                            <h5 class="mb-1">{{ user.get_full_name|default:user.username }}</h5>
+                            <span class="role-badge {{ user.role|lower }}">
+                                <i class="fas fa-user-{% if user.role == 'DOCTOR' %}md{% elif user.role == 'NURSE' %}nurse{% else %}circle{% endif %} me-1"></i>
+                                {{ user.get_role_display }}
+                            </span>
+                            <div class="text-muted small mt-1">
+                                <i class="fas fa-envelope me-1"></i>{{ user.email }}
+                            </div>
+                        </div>
+                        <div>
+                            <i class="fas fa-comment-dots fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <i class="fas fa-users fa-4x text-muted mb-3" style="opacity: 0.3;"></i>
+            <h4 class="text-muted">No users found</h4>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

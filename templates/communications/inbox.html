@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block title %}Messages - Alera{% endblock %}
+
+{% block extra_css %}
+<style>
+    .inbox-container {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+    
+    .conversation-list {
+        border-right: 1px solid #e9ecef;
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
+    
+    .conversation-item {
+        padding: 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+    }
+    
+    .conversation-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .conversation-item.active {
+        background: #e7f3ff;
+        border-left: 3px solid #0066cc;
+    }
+    
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 1.2rem;
+    }
+    
+    .user-avatar.nurse {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .user-avatar.doctor {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .conversation-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .conversation-name {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.25rem;
+    }
+    
+    .conversation-preview {
+        color: #6c757d;
+        font-size: 0.9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .conversation-time {
+        font-size: 0.85rem;
+        color: #95a5a6;
+    }
+    
+    .unread-badge {
+        background: #0066cc;
+        color: white;
+        border-radius: 12px;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #95a5a6;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-comments me-2 text-primary"></i>Messages</h2>
+            <p class="text-muted">Communicate with your team members</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+            {% if missed_calls_count > 0 %}
+            <a href="{% url 'communications:missed_calls' %}" class="btn btn-danger me-2">
+                <i class="fas fa-phone-slash me-2"></i>
+                Missed Calls
+                <span class="badge bg-white text-danger">{{ missed_calls_count }}</span>
+            </a>
+            {% endif %}
+            <a href="{% url 'communications:user_list' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>New Message
+            </a>
+        </div>
+    </div>
+    
+    <div class="inbox-container">
+        <div class="row g-0">
+            <div class="col-md-4 conversation-list">
+                {% if conversations %}
+                    {% for conversation in conversations %}
+                    <a href="{% url 'communications:conversation_detail' conversation.id %}" class="text-decoration-none">
+                        <div class="conversation-item d-flex align-items-center">
+                            <div class="user-avatar {{ conversation.other_user.role|lower }}">
+                                {{ conversation.other_user.get_full_name|slice:":1"|upper|default:conversation.other_user.username|slice:":1"|upper }}
+                            </div>
+                            <div class="conversation-info ms-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="conversation-name">
+                                        {{ conversation.other_user.get_full_name|default:conversation.other_user.username }}
+                                    </div>
+                                    {% if conversation.last_message %}
+                                    <div class="conversation-time">
+                                        {{ conversation.last_message.created_at|timesince }} ago
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="conversation-preview">
+                                        {% if conversation.last_message %}
+                                            {{ conversation.last_message.content|truncatewords:8 }}
+                                        {% else %}
+                                            Start a conversation
+                                        {% endif %}
+                                    </div>
+                                    {% if conversation.unread_count > 0 %}
+                                    <span class="unread-badge">{{ conversation.unread_count }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-muted small">
+                                    <i class="fas fa-user-{% if conversation.other_user.role == 'DOCTOR' %}md{% elif conversation.other_user.role == 'NURSE' %}nurse{% else %}circle{% endif %} me-1"></i>
+                                    {{ conversation.other_user.get_role_display }}
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h5>No conversations yet</h5>
+                        <p>Start a conversation with a team member</p>
+                        <a href="{% url 'communications:user_list' %}" class="btn btn-primary mt-3">
+                            <i class="fas fa-plus me-2"></i>Start Messaging
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-8 d-flex align-items-center justify-content-center" style="min-height: 400px;">
+                <div class="text-center text-muted">
+                    <i class="fas fa-comment-dots fa-4x mb-3" style="opacity: 0.3;"></i>
+                    <h4>Select a conversation</h4>
+                    <p>Choose a conversation from the left to start messaging</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

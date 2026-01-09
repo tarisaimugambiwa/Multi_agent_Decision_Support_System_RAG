@@ -233,6 +233,9 @@ urlpatterns = [
     # Knowledge app URLs
     path("knowledge/", include('knowledge.urls', namespace='knowledge')),
     
+    # Communications app URLs
+    path("communications/", include('communications.urls', namespace='communications')),
+    
     # API endpoints
     path("api/", include([
         path("patients/", include([
