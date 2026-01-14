@@ -117,10 +117,125 @@
         object-fit: cover;
         background: #000;
     }
+    
+    /* Connection Status Indicators */
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: rgba(255,255,255,0.2);
+        border-radius: 20px;
+        margin: 0.25rem;
+        font-size: 0.9rem;
+    }
+    
+    .status-indicator.active {
+        background: rgba(76, 175, 80, 0.3);
+        animation: pulse-glow 2s infinite;
+    }
+    
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 10px rgba(76, 175, 80, 0.5); }
+        50% { box-shadow: 0 0 20px rgba(76, 175, 80, 0.8); }
+    }
+    
+    .recording-indicator {
+        background: rgba(220, 53, 69, 0.3);
+        animation: pulse-recording 1.5s infinite;
+    }
+    
+    @keyframes pulse-recording {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    
+    /* Audio Waveform */
+    .audio-waveform {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        height: 20px;
+        margin-left: 0.5rem;
+    }
+    
+    .audio-waveform .bar {
+        width: 3px;
+        background: white;
+        border-radius: 2px;
+        animation: wave 1s ease-in-out infinite;
+    }
+    
+    .audio-waveform .bar:nth-child(1) { animation-delay: 0s; }
+    .audio-waveform .bar:nth-child(2) { animation-delay: 0.1s; }
+    .audio-waveform .bar:nth-child(3) { animation-delay: 0.2s; }
+    .audio-waveform .bar:nth-child(4) { animation-delay: 0.3s; }
+    .audio-waveform .bar:nth-child(5) { animation-delay: 0.4s; }
+    
+    @keyframes wave {
+        0%, 100% { height: 4px; }
+        50% { height: 16px; }
+    }
+    
+    .connection-status-panel {
+        margin-top: 1.5rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    .hidden {
+        display: none !important;
+    }
+    
+    /* Permission Prompt Indicator */
+    .permission-prompt {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 2rem 3rem;
+        border-radius: 15px;
+        text-align: center;
+        z-index: 9999;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    
+    .permission-prompt i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        animation: bounce 1s infinite;
+    }
+    
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    .permission-prompt h4 {
+        margin-bottom: 0.5rem;
+    }
+    
+    .permission-prompt p {
+        margin: 0;
+        opacity: 0.8;
+        font-size: 0.95rem;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- Permission Prompt Indicator -->
+<div class="permission-prompt hidden" id="permissionPrompt">
+    <i class="fas fa-shield-alt"></i>
+    <h4>Permission Required</h4>
+    <p>Please allow access to your {% if call.call_type == 'video' %}camera and microphone{% else %}microphone{% endif %}</p>
+    <p class="mt-2"><small>Look for the permission request in your browser</small></p>
+</div>
+
 <div class="container-fluid py-4" 
      data-call-type="{{ call.call_type }}"
      data-end-call-url="{% url 'communications:end_call' call.id %}"
@@ -143,7 +258,43 @@
                 <i class="fas fa-{% if call.call_type == 'video' %}video{% else %}phone{% endif %} me-2"></i>
                 <span id="callStatus">Calling...</span>
             </div>
-            <div class="call-timer" id="callTimer">00:00</div>
+            <div class="call-timer" id="callTimer">00:00:00</div>
+            
+            <!-- Connection Status Panel -->
+            <div class="connection-status-panel" id="statusPanel">
+                <!-- Microphone Indicator -->
+                <div class="status-indicator hidden" id="micIndicator">
+                    <i class="fas fa-microphone"></i>
+                    <span>Microphone Active</span>
+                    <div class="audio-waveform hidden" id="audioWaveform">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                </div>
+                
+                <!-- Camera Indicator (Video calls only) -->
+                {% if call.call_type == 'video' %}
+                <div class="status-indicator hidden" id="cameraIndicator">
+                    <i class="fas fa-video"></i>
+                    <span>Camera Active</span>
+                </div>
+                {% endif %}
+                
+                <!-- Recording Indicator -->
+                <div class="status-indicator recording-indicator hidden" id="recordingIndicator">
+                    <i class="fas fa-circle"></i>
+                    <span>Recording</span>
+                </div>
+                
+                <!-- Connection Indicator -->
+                <div class="status-indicator hidden" id="connectionIndicator">
+                    <i class="fas fa-link"></i>
+                    <span id="connectionText">Connecting...</span>
+                </div>
+            </div>
             
             <div class="call-controls">
                 <button class="call-btn mute" id="muteBtn" onclick="toggleMute()" title="Mute">
@@ -163,24 +314,53 @@
         </div>
     </div>
 </div>
+
+<!-- Django template data for JavaScript -->
+<div id="call-data" 
+     data-call-id="{{ call.id }}"
+     data-is-receiver="{% if is_receiver %}true{% else %}false{% endif %}"
+     data-call-type="{{ call.call_type }}"
+     style="display: none;">
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     /* WebRTC Implementation */
+    
+    // Get Django template data from data attributes
+    const callData = document.getElementById('call-data');
+    const callId = parseInt(callData.dataset.callId);
+    const isReceiver = callData.dataset.isReceiver === 'true';
+    const callType = callData.dataset.callType;
+    
+    // ========================================
+    // STATE MANAGEMENT
+    // ========================================
     let callStartTime = null;
     let timerInterval = null;
     let isMuted = false;
     let isVideoOff = false;
     let localStream = null;
     let peerConnection = null;
-    let pollingInterval = null;
+    let signalingPollInterval = null;  // Poll for WebRTC signals (offer/answer/ICE)
+    let callStatePollInterval = null;  // Poll for call state changes (ended by other party)
     let noAnswerTimeout = null;
+    let processedCandidates = new Set(); // Track processed ICE candidates to avoid duplicates
+    let isCallConnected = false;  // Track if WebRTC connection is established
+    let isCallEnding = false;  // Prevent multiple end call attempts
+    let audioContext = null;  // AudioContext for analyzing audio levels
+    let audioAnalyzer = null;  // AnalyserNode for detecting speaking
+    let speakingDetectionInterval = null;  // Interval for checking audio levels
     
-    const callId = {{ call.id }};
-    const isReceiver = {{ is_receiver|default:'false'|lower }};
-    const callType = '{{ call.call_type }}';
+    // ========================================
+    // RECORDING STATE
+    // ========================================
+    let mediaRecorder = null;  // MediaRecorder for capturing audio/video
+    let recordedChunks = [];   // Stores recording data chunks
+    let isRecording = false;   // Track if recording is active
+    let recordingStream = null; // Combined stream for recording both parties
     
     // STUN servers for NAT traversal
     const configuration = {
@@ -190,31 +370,579 @@
         ]
     };
     
-    // Start call timer
-    function startTimer() {
-        callStartTime = new Date();
-        timerInterval = setInterval(updateTimer, 1000);
-        document.getElementById('callStatus').textContent = 'Connected';
+    // ========================================
+    // CALL RECORDING LOGIC
+    // ========================================
+    
+    /**
+     * Start recording the call
+     * - Only starts after both parties are connected
+     * - Records both local and remote audio/video
+     * - Automatically saves recording to server
+     */
+    async function startRecording() {
+        if (isRecording || !isCallConnected) {
+            console.log('Cannot start recording: isRecording=', isRecording, 'isCallConnected=', isCallConnected);
+            return;
+        }
+        
+        try {
+            console.log('=== Starting Call Recording ===');
+            
+            // Show recording indicator
+            showRecordingIndicator();
+            
+            // Create a combined stream with both local and remote audio
+            const recordingAudioContext = new AudioContext();
+            const destination = recordingAudioContext.createMediaStreamDestination();
+            
+            // Add local audio
+            if (localStream) {
+                const localAudioTracks = localStream.getAudioTracks();
+                localAudioTracks.forEach(track => {
+                    const source = recordingAudioContext.createMediaStreamSource(new MediaStream([track]));
+                    source.connect(destination);
+                });
+            }
+            
+            // Add remote audio from peer connection
+            const receivers = peerConnection.getReceivers();
+            receivers.forEach(receiver => {
+                if (receiver.track && receiver.track.kind === 'audio') {
+                    const source = recordingAudioContext.createMediaStreamSource(new MediaStream([receiver.track]));
+                    source.connect(destination);
+                }
+            });
+            
+            // For video calls, add video track
+            if (callType === 'video' && localStream) {
+                const videoTracks = localStream.getVideoTracks();
+                videoTracks.forEach(track => {
+                    destination.stream.addTrack(track);
+                });
+            }
+            
+            recordingStream = destination.stream;
+            
+            // Create MediaRecorder
+            const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'audio/webm';
+            mediaRecorder = new MediaRecorder(recordingStream, {
+                mimeType: mimeType,
+                audioBitsPerSecond: 128000
+            });
+            
+            recordedChunks = [];
+            
+            // Handle data available
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                    console.log('Recording chunk received:', event.data.size, 'bytes');
+                }
+            };
+            
+            // Handle recording stop
+            mediaRecorder.onstop = () => {
+                console.log('Recording stopped, saving to server...');
+                saveRecordingToServer();
+            };
+            
+            // Start recording (request data every 5 seconds)
+            mediaRecorder.start(5000);
+            isRecording = true;
+            
+            // Notify server that recording has started
+            const response = await fetch(`/communications/call/${callId}/recording/start/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                console.log('✓ Server notified: Recording started');
+            }
+            
+        } catch (error) {
+            console.error('Error starting recording:', error);
+        }
     }
     
-    // Update status to ringing
+    /**
+     * Stop recording the call
+     * - Stops MediaRecorder
+     * - Saves final recording to server
+     */
+    async function stopRecording() {
+        if (!isRecording || !mediaRecorder) {
+            console.log('No active recording to stop');
+            return;
+        }
+        
+        console.log('=== Stopping Call Recording ===');
+        
+        try {
+            // Stop the media recorder
+            if (mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            
+            isRecording = false;
+            
+            // Notify server that recording has stopped
+            const response = await fetch(`/communications/call/${callId}/recording/stop/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                console.log('✓ Server notified: Recording stopped, Duration:', data.recording_duration, 's');
+            }
+            
+            console.log('Recording stopped successfully');
+            isRecording = false;
+            recordedChunks = [];
+            
+            // Hide recording indicator
+            hideRecordingIndicator();
+            
+        } catch (error) {
+            console.error('Error stopping recording:', error);
+            isRecording = false;
+            hideRecordingIndicator();
+        }
+    }
+    
+    /**
+     * Save recorded data to server
+     * - Uploads the recorded blob to server
+     * - Triggered when MediaRecorder stops
+     */
+    async function saveRecordingToServer() {
+        if (recordedChunks.length === 0) {
+            console.log('No recording data to save');
+            return;
+        }
+        
+        try {
+            console.log('Saving recording to server...', recordedChunks.length, 'chunks');
+            
+            // Create blob from recorded chunks
+            const blob = new Blob(recordedChunks, {
+                type: callType === 'video' ? 'video/webm' : 'audio/webm'
+            });
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('audio_data', blob, `call_${callId}_recording.webm`);
+            
+            // Upload to server
+            const response = await fetch(`/communications/call/${callId}/recording/save/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                console.log('✓ Recording saved to server:', data.filename);
+            } else {
+                console.error('Failed to save recording:', data.error);
+            }
+            
+        } catch (error) {
+            console.error('Error saving recording to server:', error);
+        }
+    }
+    
+    // ========================================
+    // CALL TIMER - Only starts when both parties are connected
+    // ========================================
+    
+    /**
+     * Start the call timer
+     * Should only be called when WebRTC connection is fully established
+     */
+    function startTimer() {
+        if (timerInterval) return; // Already started
+        
+        console.log('Starting call timer - connection established');
+        callStartTime = new Date();
+        timerInterval = setInterval(updateTimer, 1000);
+        isCallConnected = true;
+        setConnectedStatus();
+    }
+    
+    // ========================================
+    // UI STATE MANAGEMENT
+    // ========================================
+    
+    // Update call status display
     function setRingingStatus() {
         document.getElementById('callStatus').textContent = 'Ringing...';
     }
     
-    function updateTimer() {
-        const now = new Date();
-        const diff = Math.floor((now - callStartTime) / 1000);
-        const minutes = Math.floor(diff / 60);
-        const seconds = diff % 60;
-        document.getElementById('callTimer').textContent = 
-            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    function setConnectingStatus() {
+        document.getElementById('callStatus').textContent = 'Connecting...';
     }
     
+    function setConnectedStatus() {
+        document.getElementById('callStatus').textContent = 'Connected';
+        
+        // Show microphone indicator
+        const micIndicator = document.getElementById('micIndicator');
+        if (micIndicator) {
+            micIndicator.classList.remove('hidden');
+            micIndicator.classList.add('active');
+        }
+        
+        // Show camera indicator for video calls
+        if (callType === 'video') {
+            const cameraIndicator = document.getElementById('cameraIndicator');
+            if (cameraIndicator) {
+                cameraIndicator.classList.remove('hidden');
+                cameraIndicator.classList.add('active');
+            }
+        }
+        
+        // Update connection indicator
+        const connectionIndicator = document.getElementById('connectionIndicator');
+        const connectionText = document.getElementById('connectionText');
+        if (connectionIndicator && connectionText) {
+            connectionIndicator.classList.remove('hidden');
+            connectionIndicator.classList.add('active');
+            connectionText.textContent = 'Connected';
+        }
+    }
+    
+    /**
+     * Show recording indicator in UI
+     */
+    function showRecordingIndicator() {
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        if (recordingIndicator) {
+            recordingIndicator.classList.remove('hidden');
+        }
+    }
+    
+    /**
+     * Hide recording indicator in UI
+     */
+    function hideRecordingIndicator() {
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        if (recordingIndicator) {
+            recordingIndicator.classList.add('hidden');
+        }
+    }
+    
+    /**
+     * Start detecting speaking activity
+     * Shows audio waveform when user is speaking
+     */
+    function startSpeakingDetection() {
+        if (!localStream) return;
+        
+        try {
+            // Create audio context if not exists
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            // Create analyzer node
+            audioAnalyzer = audioContext.createAnalyser();
+            audioAnalyzer.fftSize = 256;
+            
+            const audioTracks = localStream.getAudioTracks();
+            if (audioTracks.length > 0) {
+                const source = audioContext.createMediaStreamSource(new MediaStream([audioTracks[0]]));
+                source.connect(audioAnalyzer);
+                
+                const dataArray = new Uint8Array(audioAnalyzer.frequencyBinCount);
+                const waveform = document.getElementById('audioWaveform');
+                
+                // Check audio level every 100ms
+                speakingDetectionInterval = setInterval(() => {
+                    if (isMuted || !audioAnalyzer) return;
+                    
+                    audioAnalyzer.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                    
+                    // Show waveform if speaking (threshold: 30)
+                    if (average > 30 && waveform) {
+                        waveform.classList.remove('hidden');
+                    } else if (waveform) {
+                        waveform.classList.add('hidden');
+                    }
+                }, 100);
+            }
+        } catch (error) {
+            console.error('Error starting speaking detection:', error);
+        }
+    }
+    
+    /**
+     * Stop speaking detection
+     */
+    function stopSpeakingDetection() {
+        if (speakingDetectionInterval) {
+            clearInterval(speakingDetectionInterval);
+            speakingDetectionInterval = null;
+        }
+        
+        const waveform = document.getElementById('audioWaveform');
+        if (waveform) {
+            waveform.classList.add('hidden');
+        }
+    }
+    
+    /**
+     * Show recording indicator in UI
+     */
+    function showRecordingIndicator() {
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        if (recordingIndicator) {
+            recordingIndicator.classList.remove('hidden');
+        }
+    }
+    
+    /**
+     * Hide recording indicator in UI
+     */
+    function hideRecordingIndicator() {
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        if (recordingIndicator) {
+            recordingIndicator.classList.add('hidden');
+        }
+    }
+    
+    /**
+     * Start detecting speaking activity
+     * Shows audio waveform when user is speaking
+     */
+    function startSpeakingDetection() {
+        if (!localStream) return;
+        
+        try {
+            // Create audio context if not exists
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            // Create analyzer node
+            audioAnalyzer = audioContext.createAnalyser();
+            audioAnalyzer.fftSize = 256;
+            
+            const audioTracks = localStream.getAudioTracks();
+            if (audioTracks.length > 0) {
+                const source = audioContext.createMediaStreamSource(new MediaStream([audioTracks[0]]));
+                source.connect(audioAnalyzer);
+                
+                const dataArray = new Uint8Array(audioAnalyzer.frequencyBinCount);
+                const waveform = document.getElementById('audioWaveform');
+                
+                // Check audio level every 100ms
+                speakingDetectionInterval = setInterval(() => {
+                    if (isMuted || !audioAnalyzer) return;
+                    
+                    audioAnalyzer.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                    
+                    // Show waveform if speaking (threshold: 30)
+                    if (average > 30 && waveform) {
+                        waveform.classList.remove('hidden');
+                    } else if (waveform) {
+                        waveform.classList.add('hidden');
+                    }
+                }, 100);
+            }
+        } catch (error) {
+            console.error('Error starting speaking detection:', error);
+        }
+    }
+    
+    /**
+     * Stop speaking detection
+     */
+    function stopSpeakingDetection() {
+        if (speakingDetectionInterval) {
+            clearInterval(speakingDetectionInterval);
+            speakingDetectionInterval = null;
+        }
+        
+        const waveform = document.getElementById('audioWaveform');
+        if (waveform) {
+            waveform.classList.add('hidden');
+        }
+    }
+    
+    // ========================================
+    // CALL STATE SYNCHRONIZATION
+    // ========================================
+    
+    /**
+     * Poll server for call state changes - DETECT REMOTE TERMINATION
+     * Detects when the other party ends the call or unexpected disconnects
+     * Server is authoritative - client must follow server state
+     */
+    function startCallStatePolling() {
+        console.log('Starting call state polling (server-authoritative)...');
+        callStatePollInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/communications/call/${callId}/status/`);
+                const data = await response.json();
+                
+                // Server says call is terminated - IMMEDIATE ACTION
+                if (data.is_terminated) {
+                    console.log('=== SERVER REPORTS CALL TERMINATED ===');
+                    console.log('Status:', data.status);
+                    stopCallStatePolling();
+                    handleRemoteCallEnd(data.status);
+                }
+            } catch (error) {
+                console.error('Error polling call state:', error);
+                // Network error during polling - might indicate disconnect
+                // Don't terminate immediately, wait for timeout
+            }
+        }, 1000); // Poll every second for fast detection
+    }
+    
+    function stopCallStatePolling() {
+        if (callStatePollInterval) {
+            clearInterval(callStatePollInterval);
+            callStatePollInterval = null;
+            console.log('Stopped call state polling');
+        }
+    }
+    
+    /**
+     * Handle when the remote party ends the call - REMOTE TERMINATION
+     * - Stops recording immediately
+     * - Cleans up all resources
+     * - Shows notification
+     * - Ensures symmetric termination (both parties see same state)
+     */
+    async function handleRemoteCallEnd(status) {
+        if (isCallEnding) return; // Already handling call end
+        isCallEnding = true;
+        
+        console.log('=== REMOTE PARTY TERMINATED CALL ===');
+        console.log('Termination status:', status);
+        
+        // IMMEDIATE CLEANUP - Match what the other party did
+        await terminateCallResources();
+        
+        // Determine message based on status
+        let message;
+        switch(status) {
+            case 'declined':
+                message = 'The other party declined the call.';
+                break;
+            case 'missed':
+                message = 'The other party did not answer.';
+                break;
+            case 'ended':
+                message = 'The other party ended the call.';
+                break;
+            default:
+                message = 'Call has ended.';
+        }
+        
+        console.log('✓ Remote termination cleanup complete');
+        
+        // Show notification and redirect
+        Swal.fire({
+            icon: 'info',
+            title: 'Call Ended',
+            text: message,
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#667eea',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then(() => {
+            window.location.href = '{% url "communications:inbox" %}?refresh=' + Date.now();
+        });
+    }
+    
+    /**
+     * Update the call timer display in HH:MM:SS format
+     * Only updates when timer is running
+     */
+    function updateTimer() {
+        if (!callStartTime) return;
+        
+        const now = new Date();
+        const diff = Math.floor((now - callStartTime) / 1000);
+        const hours = Math.floor(diff / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+        
+        // Format as HH:MM:SS
+        const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        document.getElementById('callTimer').textContent = timeString;
+    }
+    
+    /**
+     * Stop WebRTC signaling poll
+     */
+    function stopSignalingPoll() {
+        if (signalingPollInterval) {
+            clearInterval(signalingPollInterval);
+            signalingPollInterval = null;
+            console.log('Stopped signaling poll');
+        }
+    }
+    
+    // ========================================
+    // RESOURCE CLEANUP
+    // ========================================
+    
+    /**
+     * Clean up all WebRTC resources
+     * Stops media streams and closes peer connection
+     */
+    function cleanupWebRTC() {
+        console.log('Cleaning up WebRTC resources...');
+        
+        // Stop speaking detection
+        stopSpeakingDetection();
+        
+        // Stop all local media tracks
+        if (localStream) {
+            localStream.getTracks().forEach(track => {
+                track.stop();
+                console.log('Stopped track:', track.kind);
+            });
+            localStream = null;
+        }
+        
+        // Close peer connection
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+            console.log('Peer connection closed');
+        }
+    }
+    
+    // ========================================
+    // MEDIA CONTROLS
+    // ========================================
+    
+    /**
+     * Toggle microphone mute/unmute
+     */
     function toggleMute() {
         isMuted = !isMuted;
         const btn = document.getElementById('muteBtn');
         const icon = btn.querySelector('i');
+        const micIndicator = document.getElementById('micIndicator');
         
         if (localStream) {
             localStream.getAudioTracks().forEach(track => {
@@ -226,10 +954,20 @@
             icon.classList.remove('fa-microphone');
             icon.classList.add('fa-microphone-slash');
             btn.style.background = 'rgba(220, 53, 69, 0.8)';
+            // Hide microphone indicator when muted
+            if (micIndicator) {
+                micIndicator.classList.remove('active');
+                micIndicator.style.opacity = '0.5';
+            }
         } else {
             icon.classList.remove('fa-microphone-slash');
             icon.classList.add('fa-microphone');
             btn.style.background = 'rgba(255,255,255,0.2)';
+            // Show microphone indicator when unmuted
+            if (micIndicator) {
+                micIndicator.classList.add('active');
+                micIndicator.style.opacity = '1';
+            }
         }
     }
     
@@ -237,6 +975,7 @@
         isVideoOff = !isVideoOff;
         const btn = document.getElementById('videoBtn');
         const icon = btn.querySelector('i');
+        const cameraIndicator = document.getElementById('cameraIndicator');
         
         if (localStream) {
             localStream.getVideoTracks().forEach(track => {
@@ -248,10 +987,20 @@
             icon.classList.remove('fa-video');
             icon.classList.add('fa-video-slash');
             btn.style.background = 'rgba(220, 53, 69, 0.8)';
+            // Hide camera indicator when off
+            if (cameraIndicator) {
+                cameraIndicator.classList.remove('active');
+                cameraIndicator.style.opacity = '0.5';
+            }
         } else {
             icon.classList.remove('fa-video-slash');
             icon.classList.add('fa-video');
             btn.style.background = 'rgba(255,255,255,0.2)';
+            // Show camera indicator when on
+            if (cameraIndicator) {
+                cameraIndicator.classList.add('active');
+                cameraIndicator.style.opacity = '1';
+            }
         }
     }
     
@@ -286,121 +1035,492 @@
         });
     }
     
-    function endCall() {
-        // Clear the no-answer timeout if it exists
+    // ========================================
+    // CALL TERMINATION
+    // ========================================
+    
+    /**
+     * End the call
+     * - Stops all timers and polling
+     * - Cleans up WebRTC resources
+     * - Notifies server
+     * - Redirects to inbox
+     */
+    /**
+     * End the call - CLIENT-SIDE TERMINATION
+     * - Stops recording if active
+     * - Stops all timers and polling
+     * - Cleans up WebRTC resources immediately
+     * - Notifies server (server is authoritative)
+     * - Shows confirmation and redirects
+     */
+    async function endCall() {
+        if (isCallEnding) return; // Prevent multiple calls
+        isCallEnding = true;
+        
+        console.log('=== TERMINATING CALL (User-Initiated) ===');
+        
+        // IMMEDIATE CLEANUP - Don't wait for server response
+        await terminateCallResources();
+        
+        // Notify server that call is ending (server will broadcast to other party)
+        try {
+            const response = await fetch('{% url "communications:end_call" call.id %}', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            });
+            
+            const data = await response.json();
+            console.log('✓ Server confirmed call termination:', data.status);
+            
+            // Show termination message
+            showTerminationMessage('You ended the call');
+            
+        } catch (error) {
+            console.error('Error notifying server of call end:', error);
+            // Still show message and redirect even if server call fails
+            showTerminationMessage('Call ended');
+        }
+    }
+    
+    /**
+     * Terminate all call resources immediately
+     * - Stops recording
+     * - Clears timers and intervals
+     * - Stops polling
+     * - Cleans up WebRTC
+     * - Disables UI controls
+     */
+    async function terminateCallResources() {
+        console.log('=== IMMEDIATE RESOURCE TERMINATION ===');
+        
+        // CRITICAL: Stop recording first if it's active
+        if (isRecording) {
+            console.log('Stopping recording...');
+            await stopRecording();
+        }
+        
+        // Clear all timeouts and intervals
         if (noAnswerTimeout) {
             clearTimeout(noAnswerTimeout);
+            noAnswerTimeout = null;
         }
         
         if (timerInterval) {
             clearInterval(timerInterval);
+            timerInterval = null;
+            console.log('✓ Timer stopped');
         }
         
-        // Stop signaling poll
-        if (pollingInterval) {
-            clearInterval(pollingInterval);
-        }
+        // Stop all polling IMMEDIATELY
+        stopSignalingPoll();
+        stopCallStatePolling();
+        console.log('✓ All polling stopped');
         
-        // Close peer connection
-        if (peerConnection) {
-            peerConnection.close();
-        }
+        // Clean up WebRTC resources
+        cleanupWebRTC();
+        console.log('✓ WebRTC resources cleaned');
         
-        if (localStream) {
-            localStream.getTracks().forEach(track => track.stop());
-        }
+        // Disable all call controls
+        disableCallControls();
+        console.log('✓ UI controls disabled');
         
-        // Clear cache before navigating
-        if ('caches' in window) {
-            caches.keys().then(names => {
-                names.forEach(name => caches.delete(name));
-            });
-        }
+        // Update UI
+        document.getElementById('callStatus').textContent = 'Call Ended';
         
-        fetch('{% url "communications:end_call" call.id %}', {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': '{{ csrf_token }}'
-            }
+        console.log('=== RESOURCE TERMINATION COMPLETE ===');
+    }
+    
+    /**
+     * Disable all call controls after termination
+     */
+    function disableCallControls() {
+        const muteBtn = document.getElementById('muteBtn');
+        const videoBtn = document.getElementById('videoBtn');
+        const endBtn = document.querySelector('.call-btn.end');
+        
+        if (muteBtn) muteBtn.disabled = true;
+        if (videoBtn) videoBtn.disabled = true;
+        if (endBtn) endBtn.disabled = true;
+        
+        // Hide all indicators
+        document.querySelectorAll('.status-indicator').forEach(indicator => {
+            indicator.classList.add('hidden');
+        });
+    }
+    
+    /**
+     * Show termination message and redirect
+     */
+    function showTerminationMessage(message) {
+        Swal.fire({
+            title: 'Call Ended',
+            text: message,
+            icon: 'info',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#667eea',
+            allowOutsideClick: false,
+            allowEscapeKey: false
         }).then(() => {
             // Navigate back and force reload
-            window.location.href = '{% url "communications:inbox" %}?refresh=' + Date.now();
-        }).catch(error => {
-            console.error('Error ending call:', error);
-            // Navigate anyway
             window.location.href = '{% url "communications:inbox" %}?refresh=' + Date.now();
         });
     }
     
-    // Initialize WebRTC
+    // ========================================
+    // WEBRTC INITIALIZATION
+    // ========================================
+    
+    /**
+     * Initialize WebRTC connection
+     * - Requests user media (camera/microphone)
+     * - Creates peer connection
+     * - Sets up event handlers
+     * - Initiates signaling based on role (caller/receiver)
+     */
     async function initCall() {
         try {
-            // Get user media
+            console.log('=== Initializing Call ===');
+            console.log('Call ID:', callId);
+            console.log('Is Receiver:', isReceiver);
+            console.log('Call Type:', callType);
+            
+            setConnectingStatus();
+            
+            // Get user media with proper error handling
             const constraints = callType === 'video' 
                 ? { video: true, audio: true }
                 : { video: false, audio: true };
             
-            localStream = await navigator.mediaDevices.getUserMedia(constraints);
+            console.log('Requesting media with constraints:', constraints);
+            
+            // Check if mediaDevices is supported
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('Your browser does not support audio/video calls. Please use a modern browser like Chrome, Firefox, or Edge.');
+            }
+            
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                console.log('Local stream obtained:', localStream.getTracks().map(t => t.kind));
+                
+                // Verify we actually got the tracks we requested
+                const audioTracks = localStream.getAudioTracks();
+                const videoTracks = localStream.getVideoTracks();
+                
+                if (audioTracks.length === 0) {
+                    throw new Error('Microphone access denied or no microphone found. Please check your device settings.');
+                }
+                
+                if (callType === 'video' && videoTracks.length === 0) {
+                    throw new Error('Camera access denied or no camera found. Please check your device settings.');
+                }
+                
+                console.log(`✓ Media tracks obtained: ${audioTracks.length} audio, ${videoTracks.length} video`);
+                
+            } catch (mediaError) {
+                console.error('getUserMedia error:', mediaError);
+                
+                let errorMessage = 'Unable to access your microphone/camera.';
+                
+                if (mediaError.name === 'NotAllowedError' || mediaError.name === 'PermissionDeniedError') {
+                    errorMessage = 'Permission denied. Please allow access to your microphone' + 
+                                 (callType === 'video' ? ' and camera' : '') + 
+                                 ' in your browser settings and try again.';
+                } else if (mediaError.name === 'NotFoundError' || mediaError.name === 'DevicesNotFoundError') {
+                    errorMessage = 'No microphone' + (callType === 'video' ? ' or camera' : '') + 
+                                 ' found. Please connect a device and try again.';
+                } else if (mediaError.name === 'NotReadableError' || mediaError.name === 'TrackStartError') {
+                    errorMessage = 'Your microphone/camera is already in use by another application. Please close other apps and try again.';
+                } else if (mediaError.name === 'OverconstrainedError') {
+                    errorMessage = 'Camera/microphone settings are not compatible. Please check your device settings.';
+                } else if (mediaError.name === 'SecurityError') {
+                    errorMessage = 'Security error. Please ensure you are using HTTPS or localhost.';
+                } else if (mediaError.message) {
+                    errorMessage += ' ' + mediaError.message;
+                }
+                
+                throw new Error(errorMessage);
+            }
             
             if (callType === 'video') {
                 document.getElementById('localVideo').srcObject = localStream;
             }
             
             // Create peer connection
+            console.log('Creating RTCPeerConnection...');
             peerConnection = new RTCPeerConnection(configuration);
+            console.log('Peer connection created');
             
             // Add local stream tracks to peer connection
             localStream.getTracks().forEach(track => {
+                console.log('Adding track to peer connection:', track.kind);
                 peerConnection.addTrack(track, localStream);
             });
             
             // Handle incoming tracks
             peerConnection.ontrack = (event) => {
-                console.log('Received remote track');
+                console.log('Received remote track:', event.track.kind);
                 const remoteVideo = document.getElementById('remoteVideo');
-                if (remoteVideo && event.streams[0]) {
-                    remoteVideo.srcObject = event.streams[0];
-                    // Start timer when actually connected
-                    startTimer();
+                if (remoteVideo) {
+                    if (!remoteVideo.srcObject) {
+                        remoteVideo.srcObject = event.streams[0];
+                        console.log('Remote stream connected');
+                    }
                 }
+            };
+            
+            // Monitor connection state - critical for call state management
+            peerConnection.onconnectionstatechange = async () => {
+                console.log('Connection state:', peerConnection.connectionState);
+                
+                if (peerConnection.connectionState === 'connected') {
+                    console.log('✓ Peers connected - bidirectional communication established');
+                    isCallConnected = true;
+                    
+                    // Verify local media streams are available
+                    const hasLocalAudio = localStream && localStream.getAudioTracks().length > 0;
+                    
+                    if (!hasLocalAudio) {
+                        console.error('✗ Local audio stream not available');
+                        await handleConnectionFailure('Your microphone could not be accessed. Please check your device permissions and try again.');
+                        return;
+                    }
+                    
+                    console.log('✓ Local media confirmed');
+                    
+                    // For voice calls, we may not have a video element to check
+                    // The ontrack event will handle remote media when it arrives
+                    // Instead of waiting for remote stream in DOM, just proceed
+                    // The connection is established and tracks will flow via WebRTC
+                    
+                    console.log('✓ WebRTC connection established - proceeding with call setup');
+                    
+                    // Update UI to show connected status
+                    setConnectedStatus();
+                    
+                    // Start timer (only after successful media connection)
+                    startTimer();
+                    
+                    // Start speaking detection
+                    startSpeakingDetection();
+                    
+                    // Notify server that connection is established
+                    try {
+                        await sendSignal({ type: 'connected' });
+                    } catch (error) {
+                        console.error('Error notifying server of connection:', error);
+                    }
+                    
+                    // Start call state polling (detect if other party ends call)
+                    startCallStatePolling();
+                    
+                    // Show success notification
+                    const receiverName = '{{ receiver.get_full_name|default:receiver.username }}';
+                    const role = isReceiver ? 'Doctor' : 'Nurse';
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: `${role} and ${receiverName} are now connected`,
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                    
+                    // AUTO-START RECORDING after connection established
+                    console.log('Auto-starting recording in 1 second...');
+                    setTimeout(() => startRecording(), 1000); // Small delay to ensure streams are ready
+                    
+                } else if (peerConnection.connectionState === 'failed') {
+                    console.error('✗ Connection failed');
+                    await handleConnectionFailure('The connection failed. Please try again.');
+                    
+                } else if (peerConnection.connectionState === 'disconnected') {
+                    console.warn('⚠ Connection disconnected - checking if other party crashed/disconnected');
+                    
+                    // Stop recording on disconnect
+                    if (isRecording) {
+                        await stopRecording();
+                    }
+                    
+                    // Give 5 seconds for reconnection, then terminate
+                    setTimeout(async () => {
+                        if (peerConnection && peerConnection.connectionState === 'disconnected') {
+                            console.error('✗ Connection did not recover - terminating call');
+                            await handleUnexpectedDisconnect();
+                        }
+                    }, 5000);
+                }
+            };
+            
+            /**
+             * Handle connection failure
+             * - Stop recording if active
+             * - Clean up resources
+             * - Show error and end call for both parties
+             */
+            async function handleConnectionFailure(message) {
+                if (isCallEnding) return;
+                isCallEnding = true;
+                
+                console.log('=== CONNECTION FAILURE ===');
+                
+                // Immediate cleanup
+                await terminateCallResources();
+                
+                // Notify server to end call
+                try {
+                    await fetch('{% url "communications:end_call" call.id %}', {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        }
+                    });
+                } catch (e) {
+                    console.error('Failed to notify server:', e);
+                }
+                
+                // Show error
+                Swal.fire({
+                    title: 'Connection Failed',
+                    text: message,
+                    icon: 'error',
+                    confirmButtonColor: '#dc3545',
+                    confirmButtonText: 'OK',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                }).then(() => {
+                    window.location.href = '{% url "communications:inbox" %}?refresh=' + Date.now();
+                });
+            }
+            
+            /**
+             * Handle unexpected disconnect (network drop, app crash)
+             * - Terminates call immediately
+             * - Notifies server to end for both parties
+             */
+            async function handleUnexpectedDisconnect() {
+                if (isCallEnding) return;
+                isCallEnding = true;
+                
+                console.log('=== UNEXPECTED DISCONNECT DETECTED ===');
+                
+                // Immediate cleanup
+                await terminateCallResources();
+                
+                // Notify server to end call for both parties
+                try {
+                    await fetch('{% url "communications:end_call" call.id %}', {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        }
+                    });
+                    console.log('✓ Server notified of unexpected disconnect');
+                } catch (e) {
+                    console.error('Failed to notify server:', e);
+                }
+                
+                // Show message
+                Swal.fire({
+                    title: 'Connection Lost',
+                    text: 'The connection was lost unexpectedly.',
+                    icon: 'warning',
+                    confirmButtonColor: '#667eea',
+                    confirmButtonText: 'OK',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                }).then(() => {
+                    window.location.href = '{% url "communications:inbox" %}?refresh=' + Date.now();
+                });
+            }
+            
+            // Monitor ICE connection state
+            peerConnection.oniceconnectionstatechange = () => {
+                console.log('ICE connection state:', peerConnection.iceConnectionState);
             };
             
             // Handle ICE candidates
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
+                    console.log('New ICE candidate:', event.candidate.type);
                     sendSignal({
                         type: 'ice-candidate',
                         candidate: event.candidate.toJSON()
                     });
+                } else {
+                    console.log('All ICE candidates have been sent');
                 }
             };
             
             // Start signaling based on role
             if (!isReceiver) {
                 // Caller creates offer
+                console.log('=== CALLER: Creating offer ===');
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
+                console.log('Offer created and set as local description');
                 
                 await sendSignal({
                     type: 'offer',
                     sdp: offer.sdp
                 });
+                console.log('Offer sent to server');
                 
                 // Poll for answer
+                console.log('Starting to poll for answer...');
                 startSignalingPoll();
             } else {
                 // Receiver waits for offer then creates answer
+                console.log('=== RECEIVER: Waiting for offer ===');
                 pollForOffer();
             }
             
         } catch (error) {
             console.error('Error initializing call:', error);
+            
+            // Clean up any partial resources
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            
+            // Notify server to end call
+            try {
+                await fetch('{% url "communications:end_call" call.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to notify server of call failure:', e);
+            }
+            
+            // Show error with appropriate message
+            const errorMessage = error.message || 'Unable to initialize call. Please check your device permissions.';
+            
             Swal.fire({
-                title: 'Error',
-                text: 'Unable to access camera/microphone. Please check permissions.',
+                title: 'Connection Failed',
+                text: errorMessage,
                 icon: 'error',
-                confirmButtonColor: '#dc3545'
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'OK',
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            }).then(() => {
+                // Return to inbox
+                window.location.href = '{% url "communications:inbox" %}?refresh=' + Date.now();
             });
         }
     }
@@ -408,6 +1528,7 @@
     // Send signaling data to server
     async function sendSignal(data) {
         try {
+            console.log('Sending signal:', data.type);
             const response = await fetch(`/communications/call/${callId}/signal/`, {
                 method: 'POST',
                 headers: {
@@ -416,25 +1537,38 @@
                 },
                 body: JSON.stringify(data)
             });
-            return await response.json();
+            const result = await response.json();
+            console.log('Signal sent successfully:', data.type);
+            return result;
         } catch (error) {
             console.error('Error sending signal:', error);
         }
     }
     
-    // Poll for signaling data
+    // ========================================
+    // WEBRTC SIGNALING - Offer/Answer/ICE Exchange
+    // ========================================
+    
+    /**
+     * Poll server for WebRTC signaling data
+     * Caller polls for: answer and ICE candidates from receiver
+     * Receiver polls for: ICE candidates from caller
+     */
     function startSignalingPoll() {
-        pollingInterval = setInterval(async () => {
+        console.log('Starting signaling poll (looking for answer and ICE candidates)...');
+        signalingPollInterval = setInterval(async () => {
             try {
                 const response = await fetch(`/communications/call/${callId}/signal/`);
                 const data = await response.json();
                 
                 // Check for answer
                 if (data.answer && !peerConnection.currentRemoteDescription) {
+                    console.log('=== ANSWER RECEIVED ===');
                     // Clear the no-answer timeout since the call was answered
                     if (noAnswerTimeout) {
                         clearTimeout(noAnswerTimeout);
                         noAnswerTimeout = null;
+                        console.log('Cleared no-answer timeout');
                     }
                     
                     // Update status to ringing when receiver answers
@@ -445,15 +1579,27 @@
                         sdp: data.answer
                     });
                     await peerConnection.setRemoteDescription(answer);
-                    console.log('Remote description set (answer)');
+                    console.log('Remote description set (answer) - bidirectional communication enabled');
                 }
                 
                 // Process ICE candidates
-                if (data.ice_candidates) {
+                if (data.ice_candidates && data.ice_candidates.length > 0) {
                     for (const candidate of data.ice_candidates) {
-                        if (!peerConnection.currentRemoteDescription) continue;
+                        if (!peerConnection.currentRemoteDescription) {
+                            console.log('Skipping ICE candidate - no remote description yet');
+                            continue;
+                        }
+                        
+                        // Create a unique key for this candidate to avoid duplicates
+                        const candidateKey = JSON.stringify(candidate);
+                        if (processedCandidates.has(candidateKey)) {
+                            continue; // Already processed this candidate
+                        }
+                        
                         try {
                             await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                            processedCandidates.add(candidateKey);
+                            console.log('Added ICE candidate:', candidate.type || 'unknown');
                         } catch (e) {
                             console.error('Error adding ICE candidate:', e);
                         }
@@ -467,12 +1613,14 @@
     
     // Receiver polls for offer
     function pollForOffer() {
+        console.log('Polling for offer from caller...');
         const offerPoll = setInterval(async () => {
             try {
                 const response = await fetch(`/communications/call/${callId}/signal/`);
                 const data = await response.json();
                 
                 if (data.offer) {
+                    console.log('=== OFFER RECEIVED ===');
                     clearInterval(offerPoll);
                     
                     // Set remote description
@@ -481,15 +1629,37 @@
                         sdp: data.offer
                     });
                     await peerConnection.setRemoteDescription(offer);
+                    console.log('Offer received and set');
+                    
+                    // Process any ICE candidates that came with the offer
+                    if (data.ice_candidates && data.ice_candidates.length > 0) {
+                        console.log(`Processing ${data.ice_candidates.length} ICE candidates from caller`);
+                        for (const candidate of data.ice_candidates) {
+                            const candidateKey = JSON.stringify(candidate);
+                            if (processedCandidates.has(candidateKey)) {
+                                continue;
+                            }
+                            
+                            try {
+                                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                                processedCandidates.add(candidateKey);
+                                console.log('Added ICE candidate from offer');
+                            } catch (e) {
+                                console.error('Error adding ICE candidate:', e);
+                            }
+                        }
+                    }
                     
                     // Create answer
                     const answer = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answer);
+                    console.log('Answer created and set as local description');
                     
                     await sendSignal({
                         type: 'answer',
                         sdp: answer.sdp
                     });
+                    console.log('Answer sent - bidirectional communication should now work');
                     
                     // Start polling for ICE candidates
                     startSignalingPoll();
@@ -500,8 +1670,150 @@
         }, 1000);
     }
     
-    // Start the call
-    initCall();
+    // ========================================
+    // PRE-CALL PERMISSION CHECK
+    // ========================================
+    
+    /**
+     * Check media permissions before starting call
+     * Provides better UX by catching permission issues early
+     */
+    async function checkMediaPermissions() {
+        console.log('=== Checking Media Permissions ===');
+        
+        // Show permission prompt indicator
+        const permissionPrompt = document.getElementById('permissionPrompt');
+        if (permissionPrompt) {
+            permissionPrompt.classList.remove('hidden');
+        }
+        
+        try {
+            // Check if browser supports mediaDevices
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                // Check if it's because of insecure context (HTTP instead of HTTPS)
+                if (window.location.protocol === 'http:' && !window.location.hostname.match(/^(localhost|127\.0\.0\.1|::1)$/)) {
+                    throw new Error('INSECURE_CONTEXT');
+                }
+                throw new Error('Your browser does not support audio/video calls. Please use Chrome, Firefox, Edge, or Safari.');
+            }
+            
+            // Try to get permissions (will show browser permission prompt)
+            const constraints = callType === 'video' 
+                ? { video: true, audio: true }
+                : { video: false, audio: true };
+            
+            console.log('Requesting permissions with constraints:', constraints);
+            const testStream = await navigator.mediaDevices.getUserMedia(constraints);
+            
+            // Permissions granted, stop test stream
+            testStream.getTracks().forEach(track => track.stop());
+            console.log('✓ Permissions granted');
+            
+            // Hide permission prompt
+            if (permissionPrompt) {
+                permissionPrompt.classList.add('hidden');
+            }
+            
+            return true;
+            
+        } catch (error) {
+            console.error('Permission check failed:', error);
+            
+            // Hide permission prompt
+            if (permissionPrompt) {
+                permissionPrompt.classList.add('hidden');
+            }
+            
+            let errorTitle = 'Permission Required';
+            let errorMessage = 'Unable to access your microphone/camera.';
+            
+            // Special handling for insecure context (HTTP on network)
+            if (error.message === 'INSECURE_CONTEXT') {
+                errorTitle = 'HTTPS Required';
+                errorMessage = `
+                    <p><strong>Camera and microphone access requires a secure connection (HTTPS) when accessing from a network address.</strong></p>
+                    <br>
+                    <p>You are currently accessing: <code>${window.location.protocol}//${window.location.host}</code></p>
+                    <br>
+                    <p><strong>Quick Solutions:</strong></p>
+                    <ol style="text-align: left; margin-left: 2rem;">
+                        <li><strong>Use localhost:</strong> Access the app at <a href="http://127.0.0.1:8000" target="_blank">http://127.0.0.1:8000</a> instead</li>
+                        <li><strong>Or enable HTTPS:</strong> Ask the administrator to set up SSL certificate for network access</li>
+                    </ol>
+                `;
+            } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                errorMessage = 'Please click "Allow" when your browser asks for ' + 
+                             (callType === 'video' ? 'microphone and camera' : 'microphone') + 
+                             ' access, then try the call again.';
+            } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                errorTitle = 'Device Not Found';
+                errorMessage = 'No ' + (callType === 'video' ? 'camera or microphone' : 'microphone') + 
+                             ' was detected. Please connect a device and try again.';
+            } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                errorTitle = 'Device Busy';
+                errorMessage = 'Your ' + (callType === 'video' ? 'camera/microphone is' : 'microphone is') + 
+                             ' being used by another application. Please close other apps and try again.';
+            } else if (error.name === 'SecurityError') {
+                errorTitle = 'Security Error';
+                errorMessage = 'Media access requires a secure connection (HTTPS). Please contact support if this continues.';
+            } else if (error.message && error.message !== 'INSECURE_CONTEXT') {
+                errorMessage = error.message;
+            }
+            
+            // Show error and end call
+            await Swal.fire({
+                title: errorTitle,
+                html: errorMessage,
+                icon: 'error',
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'OK',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                width: '600px'
+            });
+            
+            // End the call
+            try {
+                await fetch('{% url "communications:end_call" call.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to end call:', e);
+            }
+            
+            // Return to inbox
+            window.location.href = '{% url "communications:inbox" %}?refresh=' + Date.now();
+            
+            return false;
+        }
+    }
+    
+    // ========================================
+    // CALL INITIALIZATION
+    // ========================================
+    
+    /**
+     * Start the call workflow
+     * 1. Check permissions first
+     * 2. Initialize WebRTC if permissions granted
+     */
+    async function startCall() {
+        // Check permissions before starting
+        const hasPermissions = await checkMediaPermissions();
+        
+        if (hasPermissions) {
+            // Permissions OK, start the call
+            await initCall();
+        }
+        // If no permissions, checkMediaPermissions already handled the error
+    }
+    
+    // Start the call when page loads
+    startCall();
     
     // Set 60-second timeout for caller if no answer
     if (!isReceiver) {
@@ -518,16 +1830,60 @@
         }, 60000); // 60 seconds
     }
     
-    // Clean up on page unload
-    window.addEventListener('beforeunload', () => {
+    // ========================================
+    // PAGE LIFECYCLE MANAGEMENT
+    // ========================================
+    
+    /**
+     * Clean up resources when user navigates away/crashes
+     * Ensures no media streams or connections are left open
+     * CRITICAL: Notifies server to terminate call for both parties
+     */
+    window.addEventListener('beforeunload', (e) => {
+        if (isCallEnding) return; // Already being handled
+        
+        console.log('Page unloading - EMERGENCY CLEANUP');
+        
+        // CRITICAL: Stop recording if active (prevents corrupted recordings)
+        if (isRecording) {
+            console.log('Emergency stop recording...');
+            // Use synchronous approach for beforeunload
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            
+            // Notify server recording stopped
+            navigator.sendBeacon(
+                `/communications/call/${callId}/recording/stop/`,
+                new FormData()
+            );
+        }
+        
+        // CRITICAL: Notify server to end call for BOTH parties
+        // Use sendBeacon for reliable delivery even if page is closing
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        const endCallBeacon = navigator.sendBeacon(
+            `/communications/call/${callId}/end/`,
+            formData
+        );
+        console.log('Beacon sent to end call:', endCallBeacon);
+        
+        // Clear all timeouts and intervals
         if (noAnswerTimeout) clearTimeout(noAnswerTimeout);
-        if (pollingInterval) clearInterval(pollingInterval);
+        stopSignalingPoll();
+        stopCallStatePolling();
+        if (timerInterval) clearInterval(timerInterval);
+        
+        // Clean up WebRTC
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop());
         }
         if (peerConnection) {
             peerConnection.close();
         }
+        
+        console.log('Emergency cleanup complete');
     });
 </script>
 {% endblock %}

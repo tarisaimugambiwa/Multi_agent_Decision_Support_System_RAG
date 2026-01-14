@@ -1,3 +1,6 @@
+<!-- User authentication data -->
+<div id="user-auth-data" data-is-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}" style="display: none;"></div>
+
 <!-- Incoming Call Modal -->
 <div class="modal fade" id="incomingCallModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
@@ -40,6 +43,7 @@
 </style>
 
 <script>
+// @ts-nocheck
 let incomingCallCheckInterval;
 let currentIncomingCallId = null;
 
@@ -281,10 +285,13 @@ function stopRingtone() {
 
 // Start checking for incoming calls when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    {% if user.is_authenticated %}
-    console.log('DOM loaded, starting incoming call checker');
-    startIncomingCallChecker();
-    {% endif %}
+    const userAuthData = document.getElementById('user-auth-data');
+    const isAuthenticated = userAuthData && userAuthData.dataset.isAuthenticated === 'true';
+    
+    if (isAuthenticated) {
+        console.log('DOM loaded, starting incoming call checker');
+        startIncomingCallChecker();
+    }
 });
 
 // Stop checking when user leaves the page

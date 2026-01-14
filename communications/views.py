@@ -169,8 +169,13 @@ def user_list(request):
     return render(request, 'communications/user_list.html', context)
 
 @login_required
+@login_required
 def initiate_call(request, user_id, call_type):
-    """Initiate a voice or video call"""
+    """
+    Initiate a voice or video call
+    - Creates call record with 'initiated' status
+    - Receiver will see incoming call notification
+    """
     receiver = get_object_or_404(User, id=user_id)
     
     # Create call record with 'initiated' status so receiver gets notification
@@ -179,9 +184,12 @@ def initiate_call(request, user_id, call_type):
         caller=request.user,
         receiver=receiver,
         call_type=call_type,
-        status='initiated',  # Changed from 'active' to 'initiated'
+        status='initiated',
         room_id=room_id
     )
+    
+    print(f"[Initiate Call] {request.user.username} calling {receiver.username}, "
+          f"Call ID: {call.id}, Type: {call_type}")
     
     context = {
         'call': call,
@@ -190,27 +198,60 @@ def initiate_call(request, user_id, call_type):
         'is_receiver': False
     }
     return render(request, 'communications/call.html', context)
-
 @login_required
 def end_call(request, call_id):
-    """End an ongoing call"""
+    """
+    End an ongoing call - SERVER AUTHORITATIVE
+    - Updates call status to 'ended'
+    - Records end time and duration
+    - Marks as 'missed' if never answered
+    - Stops recording if active
+    - Broadcasts termination to both participants
+    """
     call = get_object_or_404(
         Call,
         Q(caller=request.user) | Q(receiver=request.user),
         id=call_id
     )
     
+    print(f"[End Call] User {request.user.username} ending call {call_id}, current status: {call.status}")
+    
+    # Prevent double-ending
+    if call.status in ['ended', 'declined', 'missed']:
+        print(f"[End Call] Call {call_id} already terminated with status: {call.status}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'already_ended': True,
+                'status': call.status
+            })
+        return redirect('communications:inbox')
+    
+    # Determine termination type
+    termination_type = None
+    
     # Mark as missed if never answered (still in initiated/ringing status)
     if call.status in ['initiated', 'ringing']:
         call.status = 'missed'
         call.ended_at = timezone.now()
         call.save()
+        termination_type = 'missed'
+        print(f"[End Call] Call {call_id} marked as missed")
     else:
-        # Normal call end
+        # Normal call end - use the model method (stops recording automatically)
         call.end_call()
+        termination_type = 'ended'
+        print(f"[End Call] Call {call_id} ended normally, duration: {call.duration}s")
     
+    # Return termination event to trigger cleanup on client
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'success': True})
+        return JsonResponse({
+            'success': True,
+            'status': call.status,
+            'termination_type': termination_type,
+            'ended_at': call.ended_at.isoformat() if call.ended_at else None,
+            'duration': call.duration
+        })
     
     return redirect('communications:inbox')
 
@@ -261,19 +302,26 @@ def answer_call(request, call_id):
     time_threshold = timezone.now() - timedelta(seconds=60)
     
     try:
+        # Allow answering calls that are either 'initiated' or 'ringing' status
+        # (ringing status is set when caller sends offer)
         call = Call.objects.get(
             id=call_id, 
             receiver=request.user, 
-            status='initiated',
+            status__in=['initiated', 'ringing'],
             started_at__gte=time_threshold
         )
     except Call.DoesNotExist:
         # Call no longer available
         messages.error(request, 'This call is no longer available.')
+        print(f"[Answer Call] Call {call_id} not found or not available for user {request.user.username}")
         return redirect('communications:inbox')
     
-    call.status = 'ringing'  # Mark as ringing when receiver answers
-    call.save()
+    # Update status to ringing if it was still initiated
+    if call.status == 'initiated':
+        call.status = 'ringing'
+        call.save()
+    
+    print(f"[Answer Call] User {request.user.username} answering call {call_id}")
     
     return render(request, 'communications/call.html', {
         'call': call,
@@ -294,6 +342,144 @@ def decline_call(request, call_id):
     return redirect('communications:inbox')
 
 @login_required
+def call_status(request, call_id):
+    """
+    Get current call status - SERVER AUTHORITATIVE
+    Used for polling to detect when the other party ends the call
+    Also detects timeout/stale calls and auto-terminates them
+    """
+    from datetime import timedelta
+    
+    call = get_object_or_404(
+        Call,
+        Q(caller=request.user) | Q(receiver=request.user),
+        id=call_id
+    )
+    
+    # Auto-terminate stale calls (active for more than 2 hours without proper end)
+    if call.status in ['initiated', 'ringing', 'connected', 'recording']:
+        time_elapsed = timezone.now() - call.started_at
+        if time_elapsed > timedelta(hours=2):
+            print(f"[Call Status] Auto-terminating stale call {call_id}, elapsed: {time_elapsed}")
+            call.end_call()
+    
+    # Get other participant info for disconnect detection
+    other_participant = call.receiver if request.user == call.caller else call.caller
+    
+    return JsonResponse({
+        'status': call.status,
+        'is_recording': call.is_recording,
+        'ended_at': call.ended_at.isoformat() if call.ended_at else None,
+        'duration': call.duration,
+        'is_terminated': call.status in ['ended', 'declined', 'missed'],
+        'other_participant': other_participant.get_full_name() or other_participant.username
+    })
+
+@login_required
+def start_recording(request, call_id):
+    """
+    Start call recording
+    - Only allowed when call is in 'connected' state
+    - Automatically starts recording when both parties are connected
+    """
+    call = get_object_or_404(
+        Call,
+        Q(caller=request.user) | Q(receiver=request.user),
+        id=call_id
+    )
+    
+    if call.status != 'connected':
+        return JsonResponse({
+            'success': False,
+            'error': 'Call must be connected before recording can start'
+        }, status=400)
+    
+    if call.start_recording():
+        print(f"[Call {call_id}] Recording started by {request.user.username}")
+        return JsonResponse({
+            'success': True,
+            'status': 'recording',
+            'recording_started_at': call.recording_started_at.isoformat()
+        })
+    else:
+        return JsonResponse({
+            'success': False,
+            'error': 'Recording already in progress'
+        }, status=400)
+
+@login_required
+def stop_recording(request, call_id):
+    """
+    Stop call recording
+    - Can be called manually or automatically when call ends
+    """
+    call = get_object_or_404(
+        Call,
+        Q(caller=request.user) | Q(receiver=request.user),
+        id=call_id
+    )
+    
+    if call.stop_recording():
+        print(f"[Call {call_id}] Recording stopped by {request.user.username}, "
+              f"Duration: {call.recording_duration}s")
+        return JsonResponse({
+            'success': True,
+            'recording_duration': call.recording_duration,
+            'recording_ended_at': call.recording_ended_at.isoformat()
+        })
+    else:
+        return JsonResponse({
+            'success': False,
+            'error': 'No active recording'
+        }, status=400)
+
+@login_required
+def save_recording_chunk(request, call_id):
+    """
+    Save recording data chunks from client
+    - Receives MediaRecorder blob chunks
+    - Stores them for the call recording
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    call = get_object_or_404(
+        Call,
+        Q(caller=request.user) | Q(receiver=request.user),
+        id=call_id
+    )
+    
+    # Create recordings directory if it doesn't exist
+    import os
+    from django.conf import settings
+    recordings_dir = os.path.join(settings.MEDIA_ROOT, 'call_recordings')
+    os.makedirs(recordings_dir, exist_ok=True)
+    
+    # Generate filename
+    filename = f"call_{call_id}_{request.user.id}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.webm"
+    filepath = os.path.join(recordings_dir, filename)
+    
+    # Save the uploaded chunk
+    try:
+        if 'audio_data' in request.FILES:
+            chunk = request.FILES['audio_data']
+            with open(filepath, 'ab') as f:  # Append mode
+                for chunk_data in chunk.chunks():
+                    f.write(chunk_data)
+            
+            # Update call record with file path
+            if not call.recording_file_path:
+                call.recording_file_path = filepath
+                call.save()
+            
+            return JsonResponse({'success': True, 'filename': filename})
+    except Exception as e:
+        print(f"[Call {call_id}] Error saving recording chunk: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'No audio data'}, status=400)
+
+@login_required
 def get_missed_calls_count(request):
     """Get the count of missed calls for the current user"""
     missed_calls_count = Call.objects.filter(
@@ -305,6 +491,7 @@ def get_missed_calls_count(request):
         'count': missed_calls_count
     })
 
+@login_required
 @login_required
 def webrtc_signal(request, call_id):
     """Handle WebRTC signaling (SDP offer/answer and ICE candidates)"""
@@ -322,26 +509,57 @@ def webrtc_signal(request, call_id):
             call.caller_offer = data.get('sdp')
             call.status = 'ringing'
             call.save()
+            print(f"[Call {call_id}] Offer saved from caller - status: ringing")
             return JsonResponse({'success': True})
         
         elif data.get('type') == 'answer':
             call.receiver_answer = data.get('sdp')
-            call.status = 'ongoing'
+            # Don't change to recording yet - wait for connected state
+            call.status = 'connected'
+            call.connected_at = timezone.now()
             call.save()
+            print(f"[Call {call_id}] Answer saved from receiver - status: connected")
             return JsonResponse({'success': True})
         
         elif data.get('type') == 'ice-candidate':
-            candidates = json.loads(call.ice_candidates or '[]')
-            candidates.append(data.get('candidate'))
-            call.ice_candidates = json.dumps(candidates)
-            call.save()
+            candidate = data.get('candidate')
+            if candidate:
+                candidates = json.loads(call.ice_candidates or '[]')
+                # Add role information to track which peer sent the candidate
+                candidate['from_caller'] = (request.user == call.caller)
+                candidates.append(candidate)
+                call.ice_candidates = json.dumps(candidates)
+                call.save()
+                print(f"[Call {call_id}] ICE candidate added from {'caller' if request.user == call.caller else 'receiver'}")
             return JsonResponse({'success': True})
+        
+        elif data.get('type') == 'connected':
+            # Client confirms WebRTC connection established
+            if call.mark_connected():
+                print(f"[Call {call_id}] Marked as connected by {request.user.username}")
+                return JsonResponse({'success': True, 'status': 'connected'})
     
-    # GET request - retrieve signaling data
+    # GET request - retrieve signaling data for the other peer
     import json
+    all_candidates = json.loads(call.ice_candidates or '[]')
+    
+    # Filter candidates: send only candidates from the OTHER peer
+    is_caller = (request.user == call.caller)
+    filtered_candidates = [
+        c for c in all_candidates 
+        if c.get('from_caller') != is_caller  # Get candidates from the other peer
+    ]
+    
+    print(f"[Call {call_id}] GET signal - User: {'caller' if is_caller else 'receiver'}, "
+          f"Offer: {'Yes' if call.caller_offer else 'No'}, "
+          f"Answer: {'Yes' if call.receiver_answer else 'No'}, "
+          f"ICE candidates: {len(filtered_candidates)}, "
+          f"Status: {call.status}")
+    
     return JsonResponse({
         'offer': call.caller_offer,
         'answer': call.receiver_answer,
-        'ice_candidates': json.loads(call.ice_candidates or '[]'),
-        'status': call.status
+        'ice_candidates': filtered_candidates,
+        'status': call.status,
+        'is_recording': call.is_recording
     })
