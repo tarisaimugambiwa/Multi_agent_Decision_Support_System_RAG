@@ -87,6 +87,11 @@ def patient_dashboard(request):
     return render(request, 'patient_dashboard.html', context)
 
 
+def signup_success(request):
+    """Display success message after patient account creation."""
+    return render(request, 'registration/signup_success.html')
+
+
 def patient_signup(request):
     """Allow new patients to sign up and create a linked Patient record.
 
@@ -169,9 +174,8 @@ def patient_signup(request):
                     user=user
                 )
 
-            # Do NOT auto-login for patients. Redirect to login to complete sign-in.
-            messages.success(request, 'Account created. Please sign in to access your dashboard.')
-            return redirect('login')
+            # Do NOT auto-login for patients. Redirect to signup success page.
+            return redirect('patients:signup_success')
     else:
         form = PatientSignupForm()
 
@@ -674,39 +678,74 @@ def patient_search_api(request):
     """
     AJAX API endpoint for patient search with filters
     """
-    query = request.GET.get('q', '').strip()
-    print(f"Search query: {query}")  # Debug log
+    query = request.GET.get('query', '').strip()  # Changed from 'q' to 'query'
+    gender = request.GET.get('gender', '').strip()
+    age = request.GET.get('age', '').strip()
+    insurance = request.GET.get('insurance', '').strip()
     
-    if len(query) < 2:
+    print(f"DEBUG - Received parameters: query='{query}', gender='{gender}', age='{age}', insurance='{insurance}'")
+    print(f"DEBUG - Query length: {len(query)}")
+    
+    if len(query) < 1 and not gender and not age and not insurance:
+        print("DEBUG - No search criteria provided")
         return JsonResponse({
-            'results': [],
-            'message': 'Please enter at least 2 characters'
+            'patients': [],
+            'message': 'Please enter search criteria'
         })
 
+    # Build query filter
+    filters = Q()
+    if query and len(query) >= 1:  # Search with even 1 character
+        filters = (
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(phone_number__icontains=query) |
+            Q(address__icontains=query)
+        )
+        print(f"DEBUG - Text search filter created for: '{query}'")
+    
+    # Apply additional filters
+    if gender:
+        if filters:
+            filters &= Q(gender=gender)
+        else:
+            filters = Q(gender=gender)
+        print(f"DEBUG - Added gender filter: {gender}")
+    
     # Get patients matching the query
-    patients = Patient.objects.filter(
-        Q(first_name__icontains=query) |
-        Q(last_name__icontains=query) |
-        Q(phone_number__icontains=query) |
-        Q(address__icontains=query)
-    ).order_by('last_name', 'first_name')[:10]
-
-    # Debug logging
-    print(f"Found {patients.count()} matching patients")
+    if filters:
+        patients = Patient.objects.filter(filters).order_by('last_name', 'first_name')[:10]
+        print(f"DEBUG - Found {patients.count()} matching patients")
+    else:
+        patients = []
+        print("DEBUG - No filters applied")
 
     results = []
     for patient in patients:
-        print(f"Processing patient: ID={patient.id}, Name={patient.first_name} {patient.last_name}")
+        print(f"DEBUG - Processing patient: ID={patient.id}, Name={patient.first_name} {patient.last_name}")
         if patient.id:  # Ensure we have a valid ID
+            from datetime import date
+            age_years = None
+            if patient.date_of_birth:
+                today = date.today()
+                age_years = today.year - patient.date_of_birth.year - ((today.month, today.day) < (patient.date_of_birth.month, patient.date_of_birth.day))
+            
+            # Get recent cases count
+            recent_cases_count = patient.cases.count()
+            
             results.append({
                 'id': patient.id,
-                'patient_id': f"P{str(patient.id).zfill(4)}",  # Generate patient ID from database ID
-                'name': f"{patient.first_name} {patient.last_name}",
-                'phone': patient.phone_number or '-'
+                'first_name': patient.first_name,
+                'last_name': patient.last_name,
+                'age': age_years,
+                'gender': patient.get_gender_display() if patient.gender else 'Unknown',
+                'phone_number': patient.phone_number or 'No phone',
+                'recent_cases_count': recent_cases_count
             })
 
+    print(f"DEBUG - Returning {len(results)} results to frontend")
     return JsonResponse({
-        'results': results,
+        'patients': results,  # Changed from 'results' to 'patients'
         'message': '' if results else f'No patients found matching "{query}"'
     })
 

@@ -18,7 +18,7 @@ DIAGNOSIS_PROMPT = """
 You are an experienced medical AI assistant helping healthcare workers in rural Zimbabwe.
 
 Patient Information:
-- Age: {age}
+- Age: {age} ⚠️ CRITICAL: Age determines medication dosing - pediatric, adult, or geriatric dosing required
 - Gender: {gender}
 - Symptoms: {symptoms}
 - Vital Signs: {vital_signs}
@@ -29,17 +29,24 @@ Relevant Medical Knowledge:
 
 Based on the patient information and medical knowledge provided, please:
 1. Provide a differential diagnosis with the most likely conditions
-2. Suggest appropriate treatment recommendations
+2. Suggest appropriate treatment recommendations ⚠️ CRITICAL: ALL medication doses MUST be age-appropriate
 3. Indicate any red flags that require immediate attention
 4. Recommend follow-up care or referral if necessary
 5. Provide a confidence score (0-100) for your assessment
 6. Explain the diagnosis in simple language that a nurse can understand and explain to the patient
 
+⚠️ MEDICATION SAFETY REQUIREMENT:
+- For patients <18 years: Use PEDIATRIC dosing (weight-based: mg/kg)
+- For patients 18-65 years: Use ADULT dosing
+- For patients >65 years: Use GERIATRIC dosing (often reduced doses)
+- ALWAYS specify dosing units: mg/kg for children, mg for adults
+- Include dosing frequency (every X hours) and duration
+
 Format your response as structured JSON with the following fields:
 - primary_diagnosis: The most likely condition (medical term)
 - diagnosis_explanation: A clear, simple explanation of what this condition means, what causes it, and why you think the patient has it. Write this in plain language that anyone can understand, avoiding medical jargon.
 - differential_diagnoses: List of other possible conditions
-- treatment_plan: Recommended treatments and medications
+- treatment_plan: Recommended treatments and medications WITH AGE-APPROPRIATE DOSING
 - red_flags: Any warning signs requiring immediate attention
 - follow_up_recommendations: Next steps and follow-up care
 - confidence_score: Your confidence in this assessment (0-100)
@@ -431,9 +438,9 @@ class MedicalAIDiagnosticEngine:
         
         return False
     
-    def _query_deepseek_api(self, prompt: str) -> Optional[Dict]:
+    def _query_ollama_api(self, prompt: str) -> Optional[Dict]:
         """
-        Query DeepSeek R1 API for AI-powered diagnosis with reasoning
+        Query local Ollama API for AI-powered diagnosis with reasoning
         
         Args:
             prompt (str): Medical prompt for analysis
@@ -442,45 +449,37 @@ class MedicalAIDiagnosticEngine:
             Optional[Dict]: Parsed AI response with diagnosis details or None if unavailable
         """
         try:
-            # DeepSeek API configuration
-            api_url = getattr(settings, 'DEEPSEEK_API_URL', 'https://api.deepseek.com/v1/chat/completions')
-            api_key = getattr(settings, 'DEEPSEEK_API_KEY', '')
-            model = getattr(settings, 'DEEPSEEK_MODEL', 'deepseek-reasoner')
+            import time
+            # Ollama API configuration
+            api_url = getattr(settings, 'OLLAMA_API_URL', 'http://localhost:11434/api/generate')
+            model = getattr(settings, 'OLLAMA_MODEL', 'llama3.2')
             
-            if not api_key:
-                print("Warning: DEEPSEEK_API_KEY not configured in settings.py")
-                return None
-            
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
+            print(f"🔍 Querying Ollama API at {api_url} with model {model}")
+            print(f"📝 Prompt length: {len(prompt)} characters")
             
             payload = {
                 "model": model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a medical AI assistant. Respond with valid JSON only."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "temperature": 0.7,
-                "max_tokens": 2000,
-                "response_format": {"type": "json_object"}
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": 0.7,
+                    "num_predict": 1000,  # Reduced for speed
+                    "num_ctx": 2048  # Limit context window
+                },
+                "format": "json"
             }
             
-            response = requests.post(api_url, json=payload, headers=headers, timeout=120)
+            start_time = time.time()
+            response = requests.post(api_url, json=payload, timeout=120)  # Increased timeout
+            elapsed = time.time() - start_time
+            print(f"⏱️ Ollama responded in {elapsed:.2f} seconds")
             
             if response.status_code == 200:
                 result = response.json()
                 
-                # Extract content from DeepSeek response
-                if 'choices' in result and len(result['choices']) > 0:
-                    content = result['choices'][0]['message']['content']
+                # Extract content from Ollama response
+                if 'response' in result:
+                    content = result['response']
                     
                     # Try to parse JSON response
                     try:
@@ -490,17 +489,17 @@ class MedicalAIDiagnosticEngine:
                         # If not valid JSON, return as text
                         return {'text_response': content}
                 else:
-                    print("DeepSeek API returned unexpected response format")
+                    print("Ollama API returned unexpected response format")
                     return None
             else:
-                print(f"DeepSeek API error: {response.status_code} - {response.text}")
+                print(f"Ollama API error: {response.status_code} - {response.text}")
                 return None
             
         except requests.exceptions.ConnectionError:
-            print("Warning: Unable to connect to DeepSeek API. Check your internet connection.")
+            print("Warning: Unable to connect to Ollama. Make sure Ollama is running (ollama serve).")
             return None
         except Exception as e:
-            print(f"Error querying DeepSeek API: {str(e)}")
+            print(f"Error querying Ollama API: {str(e)}")
             return None
     
     def _query_huggingface_api(self, prompt: str) -> Optional[str]:
@@ -551,8 +550,8 @@ class MedicalAIDiagnosticEngine:
         """
         # Extract key information from knowledge context
         relevant_info = []
-        for chunk in knowledge_context[:5]:  # Top 5 most relevant
-            relevant_info.append(f"- {chunk['content'][:300]}...")
+        for chunk in knowledge_context[:3]:  # Top 3 most relevant (faster)
+            relevant_info.append(f"- {chunk['content'][:200]}...")  # Shorter snippets
         
         # Extract vital signs if available
         vital_signs = patient_history.get('vital_signs', 'Not recorded')
@@ -584,7 +583,7 @@ class MedicalAIDiagnosticEngine:
         """
         try:
             # Step 1: Query knowledge base for relevant medical information
-            knowledge_results = search_medical_knowledge(symptoms, top_k=5)
+            knowledge_results = search_medical_knowledge(symptoms, top_k=3)  # Reduced for speed
             
             # Step 2: Apply rule-based diagnostic matching
             rule_based_diagnoses = self._match_condition_rules(symptoms, patient_history)
@@ -598,36 +597,36 @@ class MedicalAIDiagnosticEngine:
                 top_diagnosis = rule_based_diagnoses[0]['condition']
                 # Extract symptoms list from symptoms string
                 symptom_list = [s.strip() for s in symptoms.split(',')]
-                treatment_results = get_treatment_recommendations(top_diagnosis, symptom_list, top_k=3)
+                treatment_results = get_treatment_recommendations(top_diagnosis, symptom_list, top_k=2)  # Reduced for speed
                 treatment_recommendations = [result['content'][:300] for result in treatment_results]
             
-            # Step 5: AI-powered diagnosis with DeepSeek R1 (using knowledge base context)
+            # Step 5: AI-powered diagnosis with Ollama (using knowledge base context)
             ai_diagnosis = None
-            deepseek_confidence = None
-            deepseek_reasoning = None
+            ollama_confidence = None
+            ollama_reasoning = None
             diagnosis_explanation = None
             
             if knowledge_results:
                 prompt = self._format_medical_prompt(symptoms, patient_history, knowledge_results)
                 
-                # Query DeepSeek R1 for AI reasoning
-                ai_response = self._query_deepseek_api(prompt)
+                # Query Ollama for AI reasoning
+                ai_response = self._query_ollama_api(prompt)
                 
                 if ai_response and isinstance(ai_response, dict):
-                    # Extract structured diagnosis from DeepSeek
+                    # Extract structured diagnosis from Ollama
                     ai_diagnosis = ai_response.get('primary_diagnosis', ai_response.get('text_response', ''))
-                    deepseek_confidence = ai_response.get('confidence_score', 0) / 100.0  # Convert to 0-1 scale
-                    deepseek_reasoning = ai_response.get('reasoning', '')
+                    ollama_confidence = ai_response.get('confidence_score', 0) / 100.0  # Convert to 0-1 scale
+                    ollama_reasoning = ai_response.get('reasoning', '')
                     
                     # Extract plain language explanation
                     diagnosis_explanation = ai_response.get('diagnosis_explanation', '')
                     
-                    # Update differential diagnoses if provided by DeepSeek
+                    # Update differential diagnoses if provided by Ollama
                     if 'differential_diagnoses' in ai_response and ai_response['differential_diagnoses']:
-                        deepseek_differentials = ai_response['differential_diagnoses']
-                        if isinstance(deepseek_differentials, list):
+                        ollama_differentials = ai_response['differential_diagnoses']
+                        if isinstance(ollama_differentials, list):
                             # Merge with rule-based diagnoses
-                            for diff in deepseek_differentials[:3]:
+                            for diff in ollama_differentials[:3]:
                                 if isinstance(diff, str):
                                     diff = {'condition': diff, 'confidence': 0.5}
                                 rule_based_diagnoses.append({
@@ -651,17 +650,17 @@ class MedicalAIDiagnosticEngine:
                         # Store for later use
                         pass
                 
-                # Fallback to HuggingFace if DeepSeek unavailable
+                # Fallback to HuggingFace if Ollama unavailable
                 if not ai_diagnosis:
                     ai_insights = self._query_huggingface_api(prompt)
                     if ai_insights:
                         ai_diagnosis = ai_insights
             
-            # Boost confidence if DeepSeek agrees with rule-based diagnosis
-            if rule_based_diagnoses and ai_diagnosis and deepseek_confidence:
+            # Boost confidence if Ollama agrees with rule-based diagnosis
+            if rule_based_diagnoses and ai_diagnosis and ollama_confidence:
                 top_rule_diagnosis = rule_based_diagnoses[0]['condition'].lower()
                 if isinstance(ai_diagnosis, str) and top_rule_diagnosis in ai_diagnosis.lower():
-                    # DeepSeek agrees - boost confidence
+                    # Ollama agrees - boost confidence
                     rule_based_diagnoses[0]['confidence'] = min(
                         rule_based_diagnoses[0]['confidence'] + 0.2,
                         0.98
@@ -688,9 +687,9 @@ class MedicalAIDiagnosticEngine:
                 ] if not rule_based_diagnoses else [],
                 'treatment_recommendations': treatment_recommendations,
                 'knowledge_sources': len(knowledge_results),
-                'ai_diagnosis': ai_diagnosis,  # DeepSeek's diagnosis
-                'ai_reasoning': deepseek_reasoning,  # DeepSeek's reasoning
-                'ai_confidence': deepseek_confidence,  # DeepSeek's confidence
+                'ai_diagnosis': ai_diagnosis,  # Ollama's diagnosis
+                'ai_reasoning': ollama_reasoning,  # Ollama's reasoning
+                'ai_confidence': ollama_confidence,  # Ollama's confidence
                 'diagnosis_explanation': diagnosis_explanation,  # Plain language explanation for nurses
                 'recommendations': self._generate_recommendations(
                     severity_score, rule_based_diagnoses, urgency_level

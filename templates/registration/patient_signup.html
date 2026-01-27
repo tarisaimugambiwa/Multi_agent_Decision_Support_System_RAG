@@ -2,10 +2,52 @@
 
 {% block title %}Patient Signup{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Hide sidebar completely on signup page */
+    .sidebar {
+        display: none !important;
+    }
+    
+    /* Make content use full width without sidebar margin */
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+    
+    /* Ensure container uses full width */
+    .container-fluid {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-8">
+            <!-- Patient Rights Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Your Patient Rights</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">By creating an account with Alera Health System, you are entitled to the following rights:</p>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i><strong>Privacy & Confidentiality:</strong> Your medical information is protected and will only be shared with your healthcare providers.</li>
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i><strong>Access to Records:</strong> You have the right to view and request copies of your medical records.</li>
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i><strong>Informed Consent:</strong> You will be informed about your diagnosis, treatment options, and potential risks.</li>
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i><strong>Quality Care:</strong> You have the right to receive safe, competent, and respectful healthcare services.</li>
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i><strong>Data Security:</strong> Your personal and medical data is encrypted and stored securely.</li>
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i><strong>Non-Discrimination:</strong> You will receive care without discrimination based on age, gender, religion, or medical condition.</li>
+                    </ul>
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <i class="fas fa-info-circle me-2"></i>By signing up, you acknowledge that you have read and understood your patient rights.
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">Create Patient Account</div>
                 <div class="card-body">

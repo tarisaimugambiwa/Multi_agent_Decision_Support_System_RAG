@@ -191,10 +191,11 @@ class CaseCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
             patient_history = {
                 'medical_history': patient.medical_history,
                 'allergies': patient.allergies,
+                'age': patient.get_age() if patient.date_of_birth else 0,  # Calculate actual age
             }
             
             demographics = {
-                'age': getattr(patient, 'age', 'unknown'),
+                'age': patient.get_age() if patient.date_of_birth else 'Unknown',
                 'gender': patient.get_gender_display(),
             }
             
@@ -216,12 +217,14 @@ class CaseCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
                 emergency_conditions=diagnosis_results.get('emergency_conditions', [])
             )
             
-            # Get medication recommendations with symptoms
+            # Get medication recommendations with symptoms and patient age
+            patient_age_years = patient.get_age() if patient.date_of_birth else None
             medication_plan = treatment_agent.recommend_medications(
                 diagnosis=diagnosis_results,
                 symptoms=symptom_list,
                 patient_history=patient_history,
-                allergies=[patient.allergies] if patient.allergies else []
+                allergies=[patient.allergies] if patient.allergies else [],
+                patient_age=patient_age_years  # ⚠️ CRITICAL: Pass age for proper dosing
             )
             treatment_results['medications'] = medication_plan
             
@@ -829,11 +832,14 @@ def regenerate_diagnosis(request, pk):
             emergency_conditions=diagnosis_results.get('emergency_conditions', [])
         )
         
+        # Get medication recommendations with patient age
+        patient_age_years = patient.get_age() if patient.date_of_birth else None
         medication_plan = treatment_agent.recommend_medications(
             diagnosis=diagnosis_results,
             symptoms=symptom_list,
             patient_history=patient_history,
-            allergies=[patient.allergies] if patient.allergies else []
+            allergies=[patient.allergies] if patient.allergies else [],
+            patient_age=patient_age_years  # ⚠️ CRITICAL: Pass age for proper dosing
         )
         treatment_results['medications'] = medication_plan
         

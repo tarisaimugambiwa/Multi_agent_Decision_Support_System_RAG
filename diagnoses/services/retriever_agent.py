@@ -41,8 +41,8 @@ class RetrieverAgent:
         logger.info(f"Searching protocols for query: '{query[:50]}...'")
         
         try:
-            # Import RAG utilities
-            from knowledge.rag_utils import search_medical_knowledge
+            # Import RAG utilities with tag filtering
+            from knowledge.rag_utils import search_diagnosis_knowledge
             
             # Build comprehensive query
             if symptoms:
@@ -51,8 +51,8 @@ class RetrieverAgent:
             else:
                 full_query = query
             
-            # Search the knowledge base using RAG
-            rag_results = search_medical_knowledge(full_query, top_k=top_k)
+            # Search ONLY diagnosis-tagged documents for faster, more relevant results
+            rag_results = search_diagnosis_knowledge(full_query, top_k=top_k)
             
             # Format results with source attribution
             formatted_results = []
@@ -63,7 +63,8 @@ class RetrieverAgent:
                     'content': result.get('content', ''),
                     'source': result.get('source', 'Unknown'),
                     'relevance_score': result.get('score', 0.0),
-                    'document_type': result.get('document_type', 'Unknown')
+                    'document_type': result.get('document_type', 'Unknown'),
+                    'tags': result.get('tags', [])
                 })
                 sources.add(result.get('source', 'Unknown'))
             

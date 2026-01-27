@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "sslserver",  # For HTTPS development server
+    # "sslserver",  # For HTTPS development server - optional, comment out if not installed
     "users",
     "patients",
     "knowledge",
@@ -147,10 +147,18 @@ SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 # AI/LLM Settings
-# DeepSeek R1 Configuration
-DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'
-DEEPSEEK_API_KEY = 'sk-0b4f10d4f37040039d1e0f15cd62ba70'
-DEEPSEEK_MODEL = 'deepseek-reasoner'  # DeepSeek R1 reasoning model
+# Ollama Configuration (Local AI)
+OLLAMA_API_URL = 'http://localhost:11434/api/generate'
+OLLAMA_MODEL = 'llama3.2'  # Current: Balanced speed/accuracy
+
+# Performance Options:
+# For FASTER responses (recommended for speed):
+# OLLAMA_MODEL = 'llama3.2:1b'  # Ultra-fast, 1GB model
+# OLLAMA_MODEL = 'mistral'      # Fast and efficient
+
+# For BETTER accuracy (slower):
+# OLLAMA_MODEL = 'llama3.1:8b'  # Larger model, better reasoning
+# OLLAMA_MODEL = 'meditron'     # Medical-specific model
 
 # HuggingFace API (Optional fallback)
 HUGGINGFACE_API_KEY = None  # Set to your API key if using HuggingFace

@@ -229,11 +229,87 @@
     }
     
     @media print {
-        .no-print {
+        /* Hide all navigation and UI elements */
+        .no-print,
+        .sidebar,
+        .navbar,
+        .topbar,
+        nav,
+        header,
+        footer,
+        .btn,
+        button,
+        .alert,
+        .modal,
+        .dropdown,
+        .breadcrumb {
             display: none !important;
         }
+        
+        /* Make report full width */
+        .container,
+        .row,
+        .col-lg-8,
+        .col-lg-4 {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* Clean up report sections */
         .report-section {
             page-break-inside: avoid;
+            box-shadow: none !important;
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        
+        /* Print header styles */
+        .report-header {
+            background: #667eea !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            color: black !important;
+            padding: 20px;
+        }
+        
+        /* Ensure colors print */
+        .diagnosis-card,
+        .medication-card,
+        .red-flag,
+        .emergency-condition {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        
+        /* Reset body */
+        body {
+            margin: 0;
+            padding: 15px;
+            background: white !important;
+        }
+        
+        /* Page breaks */
+        h3, .section-title {
+            page-break-after: avoid;
+        }
+        
+        /* Font sizes for print */
+        body {
+            font-size: 11pt;
+        }
+        
+        h1 {
+            font-size: 18pt;
+        }
+        
+        h2 {
+            font-size: 16pt;
+        }
+        
+        h3, .section-title {
+            font-size: 14pt;
         }
     }
 </style>

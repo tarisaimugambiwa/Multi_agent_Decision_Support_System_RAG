@@ -36,4 +36,5 @@ urlpatterns = [
     path('dashboard/', views.patient_dashboard, name='patient_dashboard'),
     # Patient signup (self-registration)
     path('signup/', views.patient_signup, name='patient_signup'),
+    path('signup/success/', views.signup_success, name='signup_success'),
 ]

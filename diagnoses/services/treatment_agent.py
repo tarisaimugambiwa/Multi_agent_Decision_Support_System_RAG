@@ -130,24 +130,41 @@ class TreatmentAgent:
         diagnosis: Dict,
         symptoms: List[str] = None,
         patient_history: Dict = None,
-        allergies: List[str] = None
+        allergies: List[str] = None,
+        patient_age: int = None
     ) -> Dict[str, Any]:
         """
         Generate evidence-based medication recommendations from comprehensive WHO/Uganda Clinical Guidelines database.
+        ⚠️ CRITICAL: Uses patient age to determine appropriate medication dosing (pediatric/adult/geriatric)
         
         Args:
             diagnosis: Diagnosis information
             symptoms: List of symptoms
             patient_history: Patient medical history
             allergies: List of known allergies
+            patient_age: Patient age in years ⚠️ REQUIRED for safe medication dosing
             
         Returns:
-            Dict containing medication recommendations with evidence
+            Dict containing medication recommendations with AGE-APPROPRIATE dosing
         """
-        logger.info(f"Generating evidence-based medication recommendations for: {diagnosis.get('primary_diagnosis', 'unknown')}")
+        logger.info(f"Generating medication recommendations for: {diagnosis.get('primary_diagnosis', 'unknown')} (Patient Age: {patient_age} years)")
         
         primary_diagnosis = diagnosis.get('primary_diagnosis', '')
         vital_signs = diagnosis.get('vital_signs', {})
+        
+        # Determine age group for appropriate dosing
+        if patient_age is not None:
+            if patient_age < 18:
+                age_group = 'pediatric'
+                logger.warning(f"⚠️ PEDIATRIC PATIENT (Age: {patient_age}) - Weight-based dosing REQUIRED")
+            elif patient_age > 65:
+                age_group = 'geriatric'
+                logger.info(f"Geriatric patient (Age: {patient_age}) - Reduced dosing recommended")
+            else:
+                age_group = 'adult'
+        else:
+            age_group = 'adult'
+            logger.warning("⚠️ Patient age not provided - defaulting to adult dosing. VERIFY PATIENT AGE!")
         
         # Use comprehensive medication database
         try:
@@ -160,11 +177,11 @@ class TreatmentAgent:
             # Determine severity from vital signs and symptoms
             severity = determine_severity_from_vitals(vital_signs, ' '.join(symptoms or []))
             
-            # Get medications from comprehensive database
+            # Get medications from comprehensive database WITH AGE-APPROPRIATE DOSING
             medication_data = get_medication_by_diagnosis(
                 primary_diagnosis,
                 severity=severity,
-                age_group='adult',  # Can be enhanced with patient age
+                age_group=age_group,  # ⚠️ CRITICAL: Age-based dosing
                 special_conditions=allergies
             )
             
@@ -181,9 +198,13 @@ class TreatmentAgent:
                 'prevention_measures': medication_data.get('prevention', []),
                 'monitoring_required': medication_data.get('monitoring', []),
                 'severity_assessed': severity,
+                'age_group': age_group,  # ⚠️ CRITICAL: Document which dosing category was used
+                'patient_age': patient_age,
+                'dosing_category': f"{'PEDIATRIC (weight-based mg/kg)' if age_group == 'pediatric' else 'GERIATRIC (reduced)' if age_group == 'geriatric' else 'ADULT (standard)'} dosing applied",
                 'evidence_sources': ['WHO Guidelines 2023', 'Uganda Clinical Guidelines', 'IDSA Guidelines'],
                 'allergy_warnings': allergies if allergies else [],
                 'pharmacist_consultation_required': len(primary_meds) > 0,
+                'age_verification_required': age_group == 'pediatric',  # Extra verification for children
                 'database_used': 'Comprehensive WHO/Uganda Clinical Guidelines Database'
             }
             
@@ -423,11 +444,9 @@ class TreatmentAgent:
                 'Return if symptoms worsen'
             ]
         else:  # MODERATE/ROUTINE
-            immediate = [
-                'Schedule appointment within 24-48 hours',
-                'Monitor symptoms',
-                'Maintain hydration and rest'
-            ]
+            # Get diagnosis-specific immediate relief actions
+            diagnosis_specific_actions = self._get_immediate_relief_actions(primary_diagnosis)
+            immediate = diagnosis_specific_actions[:3]  # Take first 3 specific actions
             short_term = [
                 'Follow treatment recommendations',
                 'Take prescribed medications',
@@ -517,6 +536,143 @@ class TreatmentAgent:
         
         return first_aid
     
+    def _get_immediate_relief_actions(self, diagnosis: str) -> List[str]:
+        """
+        Get diagnosis-specific immediate relief actions that can be taken right now.
+        These are practical steps to ease symptoms before medical intervention.
+        """
+        diagnosis_lower = diagnosis.lower()
+        
+        # Upper respiratory infections (cold, flu, URI, pharyngitis)
+        if any(word in diagnosis_lower for word in ['cold', 'flu', 'influenza', 'upper respiratory', 'uri', 'pharyngitis', 'sore throat', 'rhinitis', 'nasal congestion']):
+            return [
+                'Rest - avoid strenuous activities to help body recover',
+                'Drink warm fluids (tea, warm water with honey, soup) to soothe throat',
+                'Use saline nasal drops or spray to relieve nasal congestion',
+                'Gargle with warm salt water (1/2 tsp salt in glass of warm water) for sore throat',
+                'Use a humidifier or breathe steam to ease breathing',
+                'Take paracetamol/acetaminophen for fever and pain relief (if no allergies)'
+            ]
+        
+        # Headache/Migraine
+        elif any(word in diagnosis_lower for word in ['headache', 'migraine', 'cephalgia']):
+            return [
+                'Rest in a quiet, dark room away from bright lights and noise',
+                'Apply cold compress to forehead and temples for 15-20 minutes',
+                'Drink water - dehydration can worsen headaches',
+                'Take paracetamol/ibuprofen for pain relief (if no contraindications)',
+                'Avoid screens (phone, computer, TV) to reduce eye strain',
+                'Lie down with head slightly elevated'
+            ]
+        
+        # Fever
+        elif 'fever' in diagnosis_lower or 'pyrexia' in diagnosis_lower:
+            return [
+                'Rest and avoid physical exertion',
+                'Drink plenty of fluids (water, ORS, clear soups) to prevent dehydration',
+                'Wear light, breathable clothing and use light bedding',
+                'Take paracetamol/acetaminophen to reduce fever (age-appropriate dose)',
+                'Sponge with lukewarm water if fever is very high (avoid cold water)',
+                'Monitor temperature every 2-4 hours'
+            ]
+        
+        # Gastroenteritis/Diarrhea
+        elif any(word in diagnosis_lower for word in ['gastroenteritis', 'diarrhea', 'diarrhoea', 'stomach flu', 'vomiting']):
+            return [
+                'Drink ORS (oral rehydration solution) frequently in small amounts',
+                'Eat bland foods: bananas, rice, applesauce, toast (BRAT diet)',
+                'Avoid dairy products, fatty foods, caffeine, and alcohol',
+                'Rest - lie on your side if vomiting to prevent aspiration',
+                'Wash hands thoroughly to prevent spread',
+                'Take zinc supplements if available (especially for children)'
+            ]
+        
+        # Allergic reaction (non-severe)
+        elif any(word in diagnosis_lower for word in ['allergy', 'allergic', 'urticaria', 'hives', 'rash']):
+            return [
+                'Stop contact with suspected allergen immediately',
+                'Take antihistamine (e.g., chlorpheniramine, cetirizine) if available',
+                'Apply cool, wet compress to affected skin areas',
+                'Avoid scratching - keep nails short and clean',
+                'Wear loose, comfortable clothing',
+                'Monitor for worsening symptoms (difficulty breathing, swelling)'
+            ]
+        
+        # Respiratory issues (cough, asthma)
+        elif any(word in diagnosis_lower for word in ['cough', 'bronchitis', 'asthma', 'wheezing']):
+            return [
+                'Sit upright - do not lie flat, use pillows for support',
+                'Drink warm fluids to loosen mucus',
+                'Use prescribed inhaler if available (salbutamol/bronchodilator)',
+                'Breathe steam from hot water (carefully) to ease breathing',
+                'Avoid smoke, dust, and strong odors',
+                'Practice slow, deep breathing to reduce anxiety and improve oxygen flow'
+            ]
+        
+        # Abdominal pain
+        elif any(word in diagnosis_lower for word in ['abdominal pain', 'stomach pain', 'gastritis', 'dyspepsia']):
+            return [
+                'Rest and avoid eating solid foods for 1-2 hours',
+                'Drink clear fluids in small sips',
+                'Apply warm compress to abdomen for comfort',
+                'Avoid spicy, fatty, or acidic foods',
+                'Lie on your side with knees drawn up if cramping',
+                'Take antacid if available and pain is upper abdominal'
+            ]
+        
+        # Back pain/Muscle pain
+        elif any(word in diagnosis_lower for word in ['back pain', 'muscle pain', 'musculoskeletal', 'sprain', 'strain']):
+            return [
+                'Rest the affected area - avoid activities that cause pain',
+                'Apply ice pack for first 48 hours (15-20 min every 2-3 hours)',
+                'After 48 hours, apply heat (warm compress) to relax muscles',
+                'Take ibuprofen or paracetamol for pain relief',
+                'Keep affected area elevated if swollen',
+                'Gentle stretching if tolerated, avoid sudden movements'
+            ]
+        
+        # Skin infection/Wound
+        elif any(word in diagnosis_lower for word in ['wound', 'cut', 'laceration', 'skin infection', 'abscess', 'cellulitis']):
+            return [
+                'Clean wound gently with clean water and mild soap',
+                'Apply antiseptic (betadine, alcohol) if available',
+                'Cover with clean, dry bandage/dressing',
+                'Keep wound elevated to reduce swelling',
+                'Do not squeeze or pop any abscess or boil',
+                'Monitor for signs of infection (increased redness, warmth, pus, fever)'
+            ]
+        
+        # Malaria (common in Uganda)
+        elif 'malaria' in diagnosis_lower:
+            return [
+                'Start antimalarial treatment immediately as prescribed',
+                'Rest completely - avoid any strenuous activity',
+                'Drink plenty of fluids to prevent dehydration from fever/sweating',
+                'Take paracetamol for fever (avoid aspirin)',
+                'Sleep under treated mosquito net to prevent further bites',
+                'Monitor temperature and symptoms closely'
+            ]
+        
+        # UTI (Urinary tract infection)
+        elif any(word in diagnosis_lower for word in ['uti', 'urinary tract', 'cystitis', 'dysuria']):
+            return [
+                'Drink plenty of water (2-3 liters daily) to flush bacteria',
+                'Urinate frequently - do not hold urine',
+                'Apply heating pad to lower abdomen for pain relief',
+                'Avoid caffeine, alcohol, and spicy foods',
+                'Wipe front to back after using toilet (for females)',
+                'Start antibiotics if prescribed, complete full course'
+            ]
+        
+        # Default general immediate actions
+        else:
+            return [
+                'Rest and avoid strenuous activities',
+                'Stay well hydrated - drink water regularly',
+                'Monitor symptoms and note any changes',
+                'Take prescribed medications as directed'
+            ]
+    
     def _determine_protocol_type(
         self,
         diagnosis: str,
@@ -565,12 +721,16 @@ class TreatmentAgent:
         emergency_protocol: Dict = None,
         diagnosis: Dict = None
     ) -> Dict[str, List[str]]:
-        """Generate categorized action steps."""
+        """Generate categorized action steps with diagnosis-specific immediate relief measures."""
         steps = {
             'immediate': [],
             'short_term': [],
             'follow_up': []
         }
+        
+        # Get diagnosis-specific immediate relief actions
+        diagnosis_name = diagnosis.get('primary_diagnosis', '').lower() if diagnosis else ''
+        immediate_relief = self._get_immediate_relief_actions(diagnosis_name)
         
         if urgency_level == 'CRITICAL':
             if emergency_protocol:
@@ -587,10 +747,9 @@ class TreatmentAgent:
             ]
         
         elif urgency_level == 'HIGH':
-            steps['immediate'] = [
+            steps['immediate'] = immediate_relief + [
                 'Seek medical attention within 2-4 hours',
                 'Monitor symptoms for any worsening',
-                'Have patient rest in comfortable position',
                 'Keep track of vital signs if possible'
             ]
             steps['short_term'] = [
@@ -600,10 +759,10 @@ class TreatmentAgent:
             ]
         
         else:  # ROUTINE
-            steps['immediate'] = [
-                'Schedule appointment with primary care physician',
+            steps['immediate'] = immediate_relief + [
                 'Rest and monitor symptoms',
-                'Stay hydrated and maintain comfort'
+                'Stay hydrated - drink plenty of fluids',
+                'Schedule appointment with primary care physician if symptoms persist or worsen'
             ]
             steps['short_term'] = [
                 'Attend scheduled medical appointment',

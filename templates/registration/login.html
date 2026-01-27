@@ -84,21 +84,25 @@
             justify-content: center;
         }
 
-        .nav-links {
-            display: flex;
-            gap: 3rem;
-            margin-left: auto;
-        }
-
-        .nav-links a {
-            color: rgba(255, 255, 255, 0.6);
+        .btn-register-patient {
+            display: inline-block;
+            color: white;
             text-decoration: none;
-            transition: color 0.3s;
+            transition: all 0.3s;
             font-size: 0.95rem;
+            background: #0ea5e9;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
+            width: 100%;
+            text-align: center;
         }
 
-        .nav-links a:hover,
-        .nav-links a.active {
+        .btn-register-patient:hover {
+            background: #0284c7;
+            box-shadow: 0 6px 18px rgba(14, 165, 233, 0.5);
+            transform: translateY(-1px);
             color: white;
         }
 
@@ -726,9 +730,6 @@
             </div>
             Alera
         </a>
-        <div class="nav-links">
-            <a href="{% url 'patients:patient_signup' %}">Join</a>
-        </div>
     </nav>
 
     <!-- Main Content -->
@@ -799,14 +800,19 @@
             {% endif %}
 
             <div class="btn-group">
-                <button type="button" class="btn-secondary-custom" onclick="window.location.href='/admin/'">
-                    Admin Access
-                </button>
                 <button type="submit" class="btn-primary-custom">
                     Sign In
                 </button>
             </div>
         </form>
+        
+        <!-- Register as Patient -->
+        <div style="margin-top: 1.5rem; text-align: center;">
+            <p style="color: rgba(255, 255, 255, 0.6); margin-bottom: 1rem; font-size: 0.9rem;">Don't have an account?</p>
+            <a href="{% url 'patients:patient_signup' %}" class="btn-register-patient">
+                <i class="fas fa-user-plus me-2"></i>Register as Patient
+            </a>
+        </div>
     </div>
 
     <!-- Decorative Logo -->

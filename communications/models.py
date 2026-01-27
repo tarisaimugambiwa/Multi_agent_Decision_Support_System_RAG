@@ -84,6 +84,9 @@ class Call(models.Model):
     recording_file_path = models.CharField(max_length=500, null=True, blank=True, help_text="Path to recording file")
     recording_url = models.URLField(null=True, blank=True, help_text="URL to access recording")
     
+    # Missed call notification tracking
+    is_viewed = models.BooleanField(default=False, help_text="Whether the missed call has been viewed by receiver")
+    
     class Meta:
         ordering = ['-started_at']
     

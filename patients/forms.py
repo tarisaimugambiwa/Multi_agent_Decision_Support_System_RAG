@@ -57,7 +57,12 @@ class PatientSignupForm(PatientForm):
     confirm_password = forms.CharField(required=True, widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm password'}))
 
     class Meta(PatientForm.Meta):
-        fields = ['username', 'email', 'password', 'confirm_password'] + PatientForm.Meta.fields
+        # Only include basic fields for patient self-signup (exclude allergies and medical_history)
+        fields = [
+            'username', 'email', 'password', 'confirm_password',
+            'first_name', 'last_name', 'date_of_birth', 'gender',
+            'phone_number', 'address'
+        ]
 
     def clean(self):
         cleaned = super().clean()

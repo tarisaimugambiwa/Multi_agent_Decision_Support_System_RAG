@@ -25,10 +25,11 @@ def messages_inbox(request):
         conversation.last_message = conversation.get_last_message()
         conversation.other_user = conversation.participants.exclude(id=request.user.id).first()
     
-    # Get missed calls count
+    # Get missed calls count (only unviewed)
     missed_calls_count = Call.objects.filter(
         receiver=request.user,
-        status='missed'
+        status='missed',
+        is_viewed=False  # Only count unviewed missed calls
     ).count()
     
     context = {
@@ -158,6 +159,10 @@ def user_list(request):
         is_active=True
     ).order_by('username')
     
+    # If user is a patient, only show nurses and doctors
+    if request.user.role == 'PATIENT':
+        users = users.filter(role__in=['NURSE', 'DOCTOR'])
+    
     # Add role filter
     role_filter = request.GET.get('role')
     if role_filter:
@@ -263,6 +268,13 @@ def missed_calls(request):
         receiver=request.user,
         status='missed'
     ).select_related('caller').order_by('-started_at')
+    
+    # Mark all missed calls as viewed when user opens this page
+    Call.objects.filter(
+        receiver=request.user,
+        status='missed',
+        is_viewed=False
+    ).update(is_viewed=True)
     
     context = {
         'calls': calls,
@@ -481,10 +493,11 @@ def save_recording_chunk(request, call_id):
 
 @login_required
 def get_missed_calls_count(request):
-    """Get the count of missed calls for the current user"""
+    """Get the count of unviewed missed calls for the current user"""
     missed_calls_count = Call.objects.filter(
         receiver=request.user,
-        status='missed'
+        status='missed',
+        is_viewed=False  # Only count unviewed missed calls
     ).count()
     
     return JsonResponse({

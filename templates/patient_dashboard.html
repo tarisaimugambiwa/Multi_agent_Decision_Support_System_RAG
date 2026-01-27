@@ -233,6 +233,120 @@
         font-weight: 600;
         font-size: 0.8rem;
     }
+    
+    .communication-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .communication-card:hover {
+        border-color: rgba(55, 129, 255, 0.25);
+        box-shadow: 0 12px 28px rgba(0, 80, 212, 0.12);
+        transform: translateY(-2px);
+    }
+    
+    .comm-card-header {
+        padding: 20px 24px;
+        background: linear-gradient(135deg, var(--brand-900) 0%, var(--brand-700) 100%);
+        color: white;
+    }
+    
+    .comm-card-header h5 {
+        color: white;
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+    
+    .comm-card-header i {
+        margin-right: 12px;
+        font-size: 1.3rem;
+    }
+    
+    .comm-card-body {
+        padding: 24px;
+    }
+    
+    .comm-description {
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+        line-height: 1.6;
+    }
+    
+    .comm-btn {
+        width: 100%;
+        padding: 14px 20px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+    
+    .comm-btn i {
+        margin-right: 10px;
+        font-size: 1.2rem;
+    }
+    
+    .btn-messages {
+        background: var(--brand-700);
+        color: white;
+    }
+    
+    .btn-messages:hover {
+        background: var(--brand-600);
+        transform: scale(1.02);
+        color: white;
+    }
+    
+    .btn-call {
+        background: #10b981;
+        color: white;
+    }
+    
+    .btn-call:hover {
+        background: #059669;
+        transform: scale(1.02);
+        color: white;
+    }
+    
+    .comm-stats {
+        display: flex;
+        gap: 16px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .comm-stat {
+        flex: 1;
+        text-align: center;
+    }
+    
+    .comm-stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--brand-700);
+    }
+    
+    .comm-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+    }
 </style>
 {% endblock %}
 
@@ -243,8 +357,69 @@
         <div class="dashboard-header">
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <h1><i class="fas fa-heartbeat me-3"></i>My Health Reports</h1>
-                    <p>All case reports and doctor reviews for {{ patient.full_name }}</p>
+                    <h1><i class="fas fa-heartbeat me-3"></i>My Health Dashboard</h1>
+                    <p>Communicate with your healthcare team and view your medical reports</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Communication Section -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-4">
+                <div class="communication-card">
+                    <div class="comm-card-header">
+                        <h5><i class="fas fa-comments"></i>Messages</h5>
+                    </div>
+                    <div class="comm-card-body">
+                        <p class="comm-description">
+                            Send secure messages to your nurses and doctors. Ask questions, share updates, 
+                            and receive guidance about your health.
+                        </p>
+                        <a href="{% url 'communications:inbox' %}" class="btn comm-btn btn-messages">
+                            <i class="fas fa-envelope"></i>Open Messages
+                        </a>
+                        <div class="comm-stats">
+                            <div class="comm-stat">
+                                <div class="comm-stat-value" id="unreadMessagesCount">0</div>
+                                <div class="comm-stat-label">Unread</div>
+                            </div>
+                            <div class="comm-stat">
+                                <div class="comm-stat-value" id="totalConversations">0</div>
+                                <div class="comm-stat-label">Conversations</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="communication-card">
+                    <div class="comm-card-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        <h5><i class="fas fa-phone"></i>Calls</h5>
+                    </div>
+                    <div class="comm-card-body">
+                        <p class="comm-description">
+                            Connect with your healthcare providers through voice or video calls. 
+                            Get immediate assistance when you need it.
+                        </p>
+                        <a href="{% url 'communications:user_list' %}" class="btn comm-btn btn-call">
+                            <i class="fas fa-phone-alt"></i>Start a Call
+                        </a>
+                        <div class="comm-stats">
+                            <div class="comm-stat">
+                                <div class="comm-stat-value" id="missedCallsCount">0</div>
+                                <div class="comm-stat-label">Missed Calls</div>
+                            </div>
+                            <div class="comm-stat">
+                                <div class="comm-stat-value">
+                                    <a href="{% url 'communications:missed_calls' %}" style="color: var(--brand-700); text-decoration: none;">
+                                        View
+                                    </a>
+                                </div>
+                                <div class="comm-stat-label">Call History</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -252,6 +427,14 @@
         {# Anchor targets for sidebar quick links #}
         <a id="ai_reports"></a>
         <a id="doctor_reviews"></a>
+        
+        <!-- Health Reports Section -->
+        <div style="margin-top: 40px; margin-bottom: 24px;">
+            <h3 style="color: var(--text-primary); font-weight: 700; font-size: 1.5rem;">
+                <i class="fas fa-file-medical me-2"></i>My Health Reports
+            </h3>
+            <p style="color: var(--text-secondary); margin: 0;">All case reports and doctor reviews</p>
+        </div>
 
         <!-- Cases List -->
         <div class="cases-container">
@@ -406,4 +589,47 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Load communication statistics
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load missed calls count
+        fetch('/communications/get-missed-calls-count/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.count !== undefined) {
+                    document.getElementById('missedCallsCount').textContent = data.count;
+                }
+            })
+            .catch(error => console.error('Error loading missed calls:', error));
+        
+        // Load messages statistics
+        fetch('/communications/inbox/')
+            .then(response => response.text())
+            .then(html => {
+                // Parse the HTML to extract message counts
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Try to find unread count from the inbox page
+                const unreadBadge = doc.querySelector('#unreadCount, .badge');
+                if (unreadBadge) {
+                    const count = parseInt(unreadBadge.textContent) || 0;
+                    document.getElementById('unreadMessagesCount').textContent = count;
+                }
+                
+                // Count conversation elements
+                const conversations = doc.querySelectorAll('.conversation-item, .list-group-item');
+                if (conversations.length > 0) {
+                    document.getElementById('totalConversations').textContent = conversations.length;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading message stats:', error);
+                // Set default values on error
+                document.getElementById('unreadMessagesCount').textContent = '-';
+                document.getElementById('totalConversations').textContent = '-';
+            });
+    });
+</script>
 {% endblock %}

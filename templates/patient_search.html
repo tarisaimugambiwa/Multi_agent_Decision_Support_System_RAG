@@ -559,7 +559,7 @@ $(document).ready(function() {
                             <button class="btn btn-select btn-lg me-2" onclick="selectPatient(${patient.id})">
                                 <i class="fas fa-stethoscope me-2"></i>Start Diagnosis
                             </button>
-                            <a href="{% url 'patients:patient_detail' 0 %}".replace('0', patient.id) 
+                            <a href="/patients/${patient.id}/" 
                                class="btn btn-outline-secondary">
                                 <i class="fas fa-folder-open me-1"></i>View Records
                             </a>
@@ -639,7 +639,7 @@ $(document).ready(function() {
 function selectPatient(patientId) {
     // Load patient details for confirmation modal
     $.ajax({
-        url: "{% url 'patients:patient_detail_api' 0 %}".replace('0', patientId),
+        url: `/patients/api/${patientId}/detail/`,
         method: 'GET',
         success: function(patient) {
             // Populate modal with patient details
@@ -653,7 +653,7 @@ function selectPatient(patientId) {
             $('#selected-patient-cases').text(`${patient.recent_cases_count || 0} recent cases`);
             
             // Set diagnosis link
-            const diagnosisUrl = "{% url 'diagnoses:case_create' %}" + `?patient=${patientId}`;
+            const diagnosisUrl = "/diagnoses/case/create/" + `?patient=${patientId}`;
             $('#start-diagnosis-btn').attr('href', diagnosisUrl);
             
             // Show modal

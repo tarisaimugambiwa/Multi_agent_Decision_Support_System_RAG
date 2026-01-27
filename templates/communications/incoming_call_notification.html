@@ -145,6 +145,17 @@ function updateMissedCallsBadge() {
                     missedBadgeDoctor.style.display = 'none';
                 }
             }
+            
+            // Update patient badge
+            const missedBadgePatient = document.getElementById('missedCallsBadgePatient');
+            if (missedBadgePatient) {
+                if (data.count > 0) {
+                    missedBadgePatient.textContent = data.count;
+                    missedBadgePatient.style.display = 'inline-block';
+                } else {
+                    missedBadgePatient.style.display = 'none';
+                }
+            }
         })
         .catch(error => console.error('Error updating missed calls badge:', error));
 }
