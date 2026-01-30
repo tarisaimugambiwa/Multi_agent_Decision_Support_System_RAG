@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q, Count
@@ -16,7 +17,7 @@ from .forms import PatientForm
 from diagnoses.models import Case, Notification
 from users.models import User
 
-from django.contrib.auth import get_user_model, login, authenticate
+from django.contrib.auth import get_user_model, login, authenticate, logout
 from .forms import PatientSignupForm
 
 
@@ -98,6 +99,10 @@ def patient_signup(request):
     The form collects patient demographic fields plus username/password. On
     success the user is logged in and redirected to their dashboard.
     """
+    # If user is already logged in, log them out first to create a new patient account
+    if request.user.is_authenticated:
+        logout(request)
+    
     User = get_user_model()
 
     if request.method == 'POST':
@@ -174,8 +179,10 @@ def patient_signup(request):
                     user=user
                 )
 
-            # Do NOT auto-login for patients. Redirect to signup success page.
-            return redirect('patients:signup_success')
+            # Auto-login the patient after successful registration
+            login(request, user)
+            messages.success(request, f'Welcome to Alera, {user.first_name}! Your account has been created successfully.')
+            return redirect('patients:patient_dashboard')
     else:
         form = PatientSignupForm()
 

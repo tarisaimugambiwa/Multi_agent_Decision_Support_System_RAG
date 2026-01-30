@@ -1108,3 +1108,21 @@ def save_diagnosis_comments(request, case_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@login_required
+def notification_list(request):
+    """View all notifications for the logged-in user."""
+    from .models import Notification
+    
+    notifications = Notification.objects.filter(
+        recipient=request.user
+    ).select_related('actor', 'target_case').order_by('-created_at')
+    
+    # Mark all as read when viewing
+    unread_notifications = notifications.filter(read_at__isnull=True)
+    unread_notifications.update(read_at=timezone.now())
+    
+    return render(request, 'diagnoses/notifications.html', {
+        'notifications': notifications,
+    })

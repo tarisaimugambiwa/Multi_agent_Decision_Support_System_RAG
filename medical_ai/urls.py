@@ -30,6 +30,7 @@ from django.conf.urls.static import static
 from patients.views import nurse_dashboard, doctor_dashboard
 from patients.models import Patient
 from diagnoses.models import Case
+from diagnoses.views import notification_list
 from knowledge.models import KnowledgeDocument
 
 
@@ -229,6 +230,9 @@ urlpatterns = [
     
     # Diagnoses app URLs
     path("diagnoses/", include('diagnoses.urls', namespace='diagnoses')),
+    
+    # Notifications (handled by diagnoses app)
+    path("notifications/", notification_list, name='notification_list'),
     
     # Knowledge app URLs
     path("knowledge/", include('knowledge.urls', namespace='knowledge')),

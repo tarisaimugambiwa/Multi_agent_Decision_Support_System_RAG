@@ -766,7 +766,9 @@
                         {% for case in pending_cases %}
                         <tr data-case-id="{{ case.id }}" 
                             data-priority="{{ case.priority|lower }}"
-                            data-confidence="{{ case.ai_confidence|default:0 }}">
+                            data-confidence="{{ case.ai_diagnosis_parsed.diagnostic_confidence|default:0 }}"
+                            data-created="{{ case.created_at|date:'U' }}"
+                            data-patient="{{ case.patient.full_name }}">
                             <!-- Patient Info -->
                             <td>
                                 <div class="patient-info">

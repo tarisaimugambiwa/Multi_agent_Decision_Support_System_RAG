@@ -5,11 +5,12 @@
 {% block extra_css %}
 <style>
     .search-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #1976d2 100%);
         color: white;
         padding: 40px;
         border-radius: 15px;
         margin-bottom: 30px;
+        box-shadow: 0 8px 24px rgba(0, 78, 212, 0.12);
     }
     
     .search-box-large {
@@ -27,7 +28,7 @@
         margin-bottom: 20px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         transition: all 0.3s ease;
-        border-left: 4px solid #667eea;
+        border-left: 4px solid var(--secondary-color);
     }
     
     .result-card:hover {
@@ -49,7 +50,7 @@
     }
     
     .result-source {
-        color: #667eea;
+        color: var(--secondary-color);
         font-weight: 600;
         font-size: 0.95rem;
     }
@@ -61,7 +62,7 @@
     }
     
     .ai-badge {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #1976d2 100%);
         color: white;
         padding: 5px 12px;
         border-radius: 20px;

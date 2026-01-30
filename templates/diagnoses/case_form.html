@@ -5,52 +5,87 @@
 
 {% block extra_css %}
 <style>
-    .ai-assistance {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 20px;
+    .case-form-header {
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #1976d2 100%);
         color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .ai-assistance {
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #1976d2 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+        color: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     
     .form-section {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        border-left: 4px solid #007bff;
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--secondary-color);
+        transition: all 0.3s ease;
+    }
+    
+    .form-section:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     
     .patient-info {
-        background: #e8f4f8;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 10px 0;
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 15px 0;
         display: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--secondary-color);
     }
     
     .triage-result {
         margin-top: 10px;
-        padding: 10px;
-        border-radius: 5px;
+        padding: 15px;
+        border-radius: 8px;
     }
     
     .triage-critical { background-color: #f8d7da; border-left: 4px solid #dc3545; }
     .triage-high { background-color: #fff3cd; border-left: 4px solid #ffc107; }
-    .triage-moderate { background-color: #cce5ff; border-left: 4px solid #007bff; }
+    .triage-moderate { background-color: #cce5ff; border-left: 4px solid var(--secondary-color); }
     .triage-low { background-color: #d4edda; border-left: 4px solid #28a745; }
+    
+    .btn-view-patient, .btn-primary {
+        background: var(--secondary-color);
+        border: none;
+        border-radius: 8px;
+        padding: 10px 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-view-patient:hover, .btn-primary:hover {
+        background: #1976d2;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="case-form-header">
+        <h2><i class="fas fa-stethoscope me-2"></i>{{ title }}</h2>
+        <p class="mb-0">Create a new diagnostic case with AI-powered assistance</p>
+    </div>
+    
     <div class="row">
         <div class="col-lg-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4><i class="fas fa-stethoscope me-2"></i>{{ title }}</h4>
-                </div>
-                <div class="card-body">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
                     <!-- AI Assistance Banner -->
                     <div class="ai-assistance">
                         <h5><i class="fas fa-robot me-2"></i>AI-Powered Diagnosis</h5>

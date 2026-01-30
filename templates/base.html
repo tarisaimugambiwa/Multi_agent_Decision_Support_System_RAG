@@ -156,11 +156,13 @@
             padding: 4px 8px;
             border-radius: 20px;
             font-weight: 500;
+            color: white;
         }
         
         .role-nurse { background-color: var(--nurse-color); }
         .role-doctor { background-color: var(--doctor-color); }
         .role-expert { background-color: var(--expert-color); }
+        .role-patient { background-color: var(--secondary-color); }
         
         .user-avatar {
             width: 32px;
@@ -397,20 +399,27 @@
                             <div class="nav-section">Patient Management</div>
                             
                             <li class="nav-item">
-                                <a class="nav-link {% if 'patient' in request.path %}active{% endif %}" href="{% url 'patients:patient_list' %}">
+                                <a class="nav-link {% if 'patient' in request.path and 'record' not in request.path %}active{% endif %}" href="{% url 'patients:patient_list' %}">
                                     <i class="fas fa-users"></i>
                                     <span>Patients</span>
                                 </a>
                             </li>
                             
                             <li class="nav-item">
-                                <a class="nav-link {% if 'medical-record' in request.path %}active{% endif %}" href="#">
+                                <a class="nav-link {% if 'records' in request.path %}active{% endif %}" href="{% url 'patients:medical_record_list' %}">
                                     <i class="fas fa-file-medical"></i>
                                     <span>Medical Records</span>
                                 </a>
                             </li>
                             
-                            <!-- Knowledge Base Section -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'case' in request.path %}active{% endif %}" href="{% url 'diagnoses:case_list' %}">
+                                    <i class="fas fa-stethoscope"></i>
+                                    <span>Diagnostic Cases</span>
+                                </a>
+                            </li>
+                            
+                            <!-- Resources Section -->
                             <div class="nav-section">Resources</div>
                             
                             <li class="nav-item">
@@ -443,8 +452,8 @@
                         {% elif user.role == 'PATIENT' %}
                             <li class="nav-item">
                                 <a class="nav-link {% if request.path == '/patients/dashboard/' %}active{% endif %}" href="{% url 'patients:patient_dashboard' %}">
-                                    <i class="fas fa-file-medical-alt"></i>
-                                    <span>My Reports</span>
+                                    <i class="fas fa-user"></i>
+                                    <span>Patient Dashboard</span>
                                 </a>
                             </li>
                             

@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block title %}Medical Records - Alera{% endblock %}
+
+{% block extra_css %}
+<style>
+    .records-header {
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #1976d2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .search-box {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .record-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid var(--secondary-color);
+    }
+    
+    .record-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .record-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #1976d2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 24px;
+    }
+    
+    .record-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 5px;
+    }
+    
+    .record-info {
+        color: #6c757d;
+        font-size: 0.95rem;
+    }
+    
+    .record-info i {
+        width: 20px;
+        color: var(--secondary-color);
+    }
+    
+    .btn-view-record {
+        background: var(--secondary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-view-record:hover {
+        background: #1976d2;
+        transform: translateY(-2px);
+    }
+    
+    .btn-add-record {
+        background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        border: none;
+        padding: 12px 30px;
+        font-weight: 600;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-add-record:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
+    }
+    
+    .no-records {
+        text-align: center;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .no-records i {
+        font-size: 80px;
+        color: #e0e0e0;
+        margin-bottom: 20px;
+    }
+    
+    .filter-badge {
+        background: var(--secondary-color);
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="records-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="fas fa-file-medical me-2"></i>Medical Records</h2>
+                <p class="mb-0">View and manage patient medical history</p>
+            </div>
+            <a href="{% url 'patients:medical_record_create' %}" class="btn btn-add-record">
+                <i class="fas fa-plus me-2"></i>Add New Record
+            </a>
+        </div>
+    </div>
+
+    <!-- Search and Filter Box -->
+    <div class="search-box">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label"><i class="fas fa-search me-2"></i>Search Records</label>
+                <input type="text" 
+                       name="search" 
+                       class="form-control form-control-lg" 
+                       placeholder="Search by patient name, symptoms, diagnosis..." 
+                       value="{{ search_query }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><i class="fas fa-user me-2"></i>Filter by Patient</label>
+                <select name="patient" class="form-select form-select-lg">
+                    <option value="">All Patients</option>
+                    {% for patient in patients %}
+                        <option value="{{ patient.id }}" {% if patient_filter == patient.id|stringformat:"s" %}selected{% endif %}>
+                            {{ patient.get_full_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+        
+        {% if search_query or patient_filter %}
+        <div class="mt-3">
+            <span class="filter-badge">
+                <i class="fas fa-filter me-1"></i>Filters Active
+                <a href="{% url 'patients:medical_record_list' %}" class="text-white ms-2" title="Clear filters">
+                    <i class="fas fa-times"></i>
+                </a>
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Records List -->
+    {% if medical_records %}
+        <div class="row">
+            {% for record in medical_records %}
+            <div class="col-12">
+                <div class="record-card">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <div class="record-icon">
+                                <i class="fas fa-file-medical"></i>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="record-title">
+                                {{ record.patient.full_name }}
+                            </div>
+                            <div class="record-info">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <i class="fas fa-calendar"></i>
+                                        <strong>Visit:</strong> {{ record.visit_date|date:"M d, Y" }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <i class="fas fa-user-md"></i>
+                                        <strong>Provider:</strong> {{ record.user.get_full_name|default:record.user.username }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <i class="fas fa-stethoscope"></i>
+                                        <strong>Diagnosis:</strong> 
+                                        <span class="text-truncate d-inline-block" style="max-width: 300px;">
+                                            {{ record.diagnosis|default:"Not specified" }}
+                                        </span>
+                                    </div>
+                                </div>
+                                {% if record.symptoms %}
+                                <div class="mt-2">
+                                    <i class="fas fa-notes-medical"></i>
+                                    <strong>Symptoms:</strong> 
+                                    <span class="text-truncate d-inline-block" style="max-width: 500px;">
+                                        {{ record.symptoms|truncatewords:15 }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <a href="{% url 'patients:medical_record_detail' record.pk %}" 
+                               class="btn btn-view-record">
+                                <i class="fas fa-eye me-2"></i>View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <nav aria-label="Medical records pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if patient_filter %}&patient={{ patient_filter }}{% endif %}">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if patient_filter %}&patient={{ patient_filter }}{% endif %}">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if patient_filter %}&patient={{ patient_filter }}{% endif %}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if patient_filter %}&patient={{ patient_filter }}{% endif %}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+    {% else %}
+        <!-- No Records Found -->
+        <div class="no-records">
+            <i class="fas fa-file-medical"></i>
+            <h4 class="text-muted">No Medical Records Found</h4>
+            {% if search_query or patient_filter %}
+                <p>Try adjusting your search criteria or filters.</p>
+                <a href="{% url 'patients:medical_record_list' %}" class="btn btn-outline-secondary mt-3">
+                    <i class="fas fa-times me-2"></i>Clear Filters
+                </a>
+            {% else %}
+                <p>Start by adding the first medical record.</p>
+                <a href="{% url 'patients:medical_record_create' %}" class="btn btn-add-record mt-3">
+                    <i class="fas fa-plus me-2"></i>Add New Record
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
